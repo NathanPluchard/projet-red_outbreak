@@ -1,2 +1,3 @@
 Classes : survivants, Punk(Pillards),  Medecin de fortune, Sauveur
 Potions de vies : Kit de chirurgie de fortune < poche de perfusion < bandage militaire < pansement compressif < seringue d'adrénaline
+Monstre → Zombie / mutant
