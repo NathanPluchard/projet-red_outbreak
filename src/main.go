@@ -1,7 +1,1 @@
-package main
-
-import "fmt"
-
-func main() {
-	fmt.Println("Bienvenue dans Outbreak")
-}
+                                //Interface Dans le Terminal//
