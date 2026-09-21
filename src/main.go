@@ -102,7 +102,7 @@ func mainMenu(c *classes.Classe) {
 		case 6:
 			showArtists()
 		case 0:
-			fmt.Println("À bientôt, survivant.")
+			fmt.Println("A bientôt l'ami j'espère qu'on se reverra.....")
 			return
 		default:
 			fmt.Println("Choix invalide.")
