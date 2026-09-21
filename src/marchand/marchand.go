@@ -9,7 +9,7 @@ type ShopItem struct {
 	Cost int
 }
 
-func merchant(c *Character) {
+func merchant(c *Classe) {
 	items := []ShopItem{
 		{"Kit de chirurgie de fortune", 40},
 		{"Acier", 15},
@@ -20,6 +20,7 @@ func merchant(c *Character) {
 		{"Bandage militaire", 10},
 		{"Pansement compressif", 7},
 		{"Poche d'adrélanine", 5},
+
 	}
 
 	for {
