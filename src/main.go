@@ -1,49 +1,16 @@
-package src
+package main
 
-import
+import (
+	"fmt"
+	"strings"
 
-func characterCreation() Character {
-	fmt.Print("Entrez votre nom (lettres uniquement) : ")
-	var name string
-	for {
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
-		if isAlpha(input) && input != "" {
-			name = formatName(input)
-			break
-		}
-		fmt.Print("Nom invalide, réessayez : ")
-	}
-}
- 
-	fmt.Println("Choisissez votre classe :")
-	fmt.Println("1. Militaire (120 PV)")
-	fmt.Println("2. Médecin (80 PV)")
-	fmt.Println("3. Pillard (100 PV)")
- 
-	var class string
-	var maxHP int
-	for {
-		choice := readInt()
-		switch choice {
-		case 1:
-			class = "Survivanrt"
-			maxHP = 200
-		case 2:
-			class = "Médecin de fortune"
-			maxHP = 100
-		case 3:
-			class = "Punk"
-			maxHP = 150
-        case 4:
-            class = "Sauveur"
-            maxHP = 80
-		default:
-			fmt.Println("Choix invalide, réessayez.")
-			continue
-		}
-		break
-	}
+	"outbreak/classes"
+	"outbreak/forgeron"
+	"outbreak/inventaire"
+	"outbreak/marchand"
+	"outbreak/monstre"
+)
+
 func isAlpha(s string) bool {
 	for _, r := range s {
 		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
@@ -52,113 +19,64 @@ func isAlpha(s string) bool {
 	}
 	return true
 }
- 
+
 func formatName(s string) string {
 	s = strings.ToLower(s)
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-func displayInfo(c *Classe) {
-	fmt.Println("---------------------------------")
-	fmt.Printf("Nom       : %s\n", c.Name)
-	fmt.Printf("Classe    : %s\n", c.Class)
-	fmt.Printf("Niveau    : %d\n", c.Level)
-	fmt.Printf("PV        : %d / %d\n", c.CurrentHP, c.MaxHP)
-	fmt.Printf("Mana      : %d / %d\n", c.Mana, c.MaxMana)
-	fmt.Printf("Or        : %d\n", c.Gold)
-	fmt.Printf("Exp       : %d / %d\n", c.Exp, c.MaxExp)
-	fmt.Printf("Sorts     : %s\n", strings.Join(c.Skills, ", "))
-	fmt.Printf("Casque    : %s\n", displayOrEmpty(c.Equip.Head))
-	fmt.Printf("Torse     : %s\n", displayOrEmpty(c.Equip.Torso))
-	fmt.Printf("Pieds     : %s\n", displayOrEmpty(c.Equip.Feet))
-	fmt.Println("---------------------------------")
-}
- 
-func displayOrEmpty(s string) string {
-	if s == "" {
-		return "Aucun"
-	}
-	return s
-}
-
-type AttackInfo struct {
-	Name        string
-	Damage      int
-	ManaCost    int
-	UnlockLevel int
-}
-
-var allAttacks = []AttackInfo{
-	{"Attaque basique", 5, 0, 1},
-	{"Crosse de fusil", 8, 0, 3},
-	{"Cocktail Molotov", 18, 10, 5},
-}
-
-func getAttackInfo(name string) *AttackInfo {
-	for i := range allAttacks {
-		if allAttacks[i].Name == name {
-			return &allAttacks[i]
+func characterCreation() classes.Classe {
+	fmt.Print("Entrez votre nom (lettres uniquement) : ")
+	var nom string
+	for {
+		input, _ := classes.Reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		if isAlpha(input) && input != "" {
+			nom = formatName(input)
+			break
 		}
+		fmt.Print("Nom invalide, réessayez : ")
 	}
-	return nil
-}
 
-func gainExp(c *Classe, exp int) {
-	c.Exp += exp
-	fmt.Printf("Vous gagnez %d points d'expérience.\n", exp)
+	fmt.Println("Choisissez votre classe :")
+	fmt.Println("1. Survivant")
+	fmt.Println("2. Punk")
+	fmt.Println("3. Médecin de fortune")
+	fmt.Println("4. Sauveur")
 
-	for c.Exp >= c.MaxExp {
-		c.Exp -= c.MaxExp
-		c.Level++
-		c.MaxExp += 20
-		c.MaxHP += 10
-		c.CurrentHP = c.MaxHP
-		fmt.Println("Niveau supérieur ! Vous êtes maintenant niveau", c.Level)
-
-		for _, atk := range allAttacks {
-			if atk.UnlockLevel == c.Level && !contains(c.Attacks, atk.Name) {
-				c.Attacks = append(c.Attacks, atk.Name)
-				fmt.Println("Nouvelle attaque débloquée :", atk.Name)
-			}
+	var nomClasse string
+	for {
+		switch classes.ReadInt() {
+		case 1:
+			nomClasse = "Survivant"
+		case 2:
+			nomClasse = "Punk"
+		case 3:
+			nomClasse = "Médecin de fortune"
+		case 4:
+			nomClasse = "Sauveur"
+		default:
+			fmt.Println("Choix invalide, réessayez.")
+			continue
 		}
-	}
-}
-func combatSpellMenu(c *Classe, m *Monster) {
-	fmt.Println("--- Choisissez une attaque ---")
-	for i, name := range c.Attacks {
-		info := getAttackInfo(name)
-		if info.ManaCost > 0 {
-			fmt.Printf("%d. %s (%d dégâts, %d mana)\n", i+1, info.Name, info.Damage, info.ManaCost)
-		} else {
-			fmt.Printf("%d. %s (%d dégâts)\n", i+1, info.Name, info.Damage)
-		}
-	}
-	fmt.Print("Choix : ")
-
-	choice := readInt()
-	if choice < 1 || choice > len(c.Attacks) {
-		fmt.Println("Choix invalide, tour perdu.")
-		return
+		break
 	}
 
-	attackName := c.Attacks[choice-1]
-	info := getAttackInfo(attackName)
+	perso := classes.Classes[nomClasse]
+	perso.Nom = nom
+	perso.PV = perso.PVBase
+	perso.Level = 1
+	perso.Attacks = []string{"Attaque basique"}
+	perso.Inventory = []string{}
 
-	if info.ManaCost > c.Mana {
-		fmt.Println("Mana insuffisant pour cette attaque.")
-		return
-	}
-	c.Mana -= info.ManaCost
-
-	m.CurrentHP -= info.Damage
-	if m.CurrentHP < 0 {
-		m.CurrentHP = 0
-	}
-	fmt.Printf("%s inflige %d dégâts à %s avec %s\n", c.Name, info.Damage, m.Name, info.Name)
-	fmt.Printf("%s : PV %d / %d\n", m.Name, m.CurrentHP, m.MaxHP)
+	return perso
 }
 
-func mainMenu(c *Classe) {
+func showArtists() {
+	fmt.Println("Les artistes cachés dans les slides sont les icônes fournies par les créateurs du support visuel (illustrations libres de droit).")
+}
+
+func mainMenu(c *classes.Classe) {
 	for {
 		fmt.Println("\n===== MENU =====")
 		fmt.Println("1. Afficher les informations du personnage")
@@ -169,19 +87,18 @@ func mainMenu(c *Classe) {
 		fmt.Println("6. Qui sont-ils")
 		fmt.Println("0. Quitter")
 		fmt.Print("Choix : ")
- 
-		choice := readInt()
-		switch choice {
+
+		switch classes.ReadInt() {
 		case 1:
-			displayInfo(c)
+			classes.DisplayInfo(c)
 		case 2:
-			accessInventory(c)
+			inventaire.AccessInventory(c)
 		case 3:
-			merchant(c)
+			marchand.Merchant(c)
 		case 4:
-			blacksmith(c)
+			forgeron.BlacksmithTiers(c)
 		case 5:
-			trainingFight(c)
+			monstre.TrainingFight(c)
 		case 6:
 			showArtists()
 		case 0:
@@ -192,22 +109,9 @@ func mainMenu(c *Classe) {
 		}
 	}
 }
- 
- 
-func readInt() int {
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-	n, err := strconv.Atoi(input)
-	if err != nil {
-		return -1
-	}
-	return n
-}
- 
- 
+
 func main() {
 	fmt.Println("Bienvenue dans Outbreak")
 	c1 := characterCreation()
 	mainMenu(&c1)
 }
-
