@@ -1,7 +1,5 @@
 package classes
 
-package classes
-
 import (
 	"bufio"
 	"fmt"
