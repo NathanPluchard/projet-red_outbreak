@@ -74,3 +74,65 @@ var Classes = map[string]Classe{
 	},
 }
 
+<<<<<<< HEAD
+=======
+
+func trouverPotion(nom string) (potion.Potion, bool) {
+	for _, p := range potion.PotionsDeVieDisponibles {
+		if p.Nom == nom {
+			return p, true
+		}
+	}
+	for _, p := range potion.PotionsDePoisonDisponibles {
+		if p.Nom == nom {
+			return p, true
+		}
+	}
+	return potion.Potion{}, false
+}
+
+
+func (c *Classe) UtiliserPotion(nomPotion string) {
+	
+	index := -1
+	for i, nom := range c.Inventory {
+		if nom == nomPotion {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		fmt.Printf("%s n'a pas de %s dans son inventaire.\n", c.Nom, nomPotion)
+		return
+	}
+
+	
+	p, trouve := trouverPotion(nomPotion)
+	if !trouve {
+		fmt.Printf("Potion inconnue : %s\n", nomPotion)
+		return
+	}
+
+	
+	switch p.Type {
+	case "vie":
+		c.PV += p.Effet
+		if c.PV > c.PVBase {
+			c.PV = c.PVBase
+		}
+		fmt.Printf("%s utilise %s et regagne %d PV ! (PV: %d/%d)\n",
+			c.Nom, p.Nom, p.Effet, c.PV, c.PVBase)
+
+	case "poison":
+		c.PV -= p.Effet
+		if c.PV < 0 {
+			c.PV = 0
+		}
+		fmt.Printf("%s subit %s et perd %d PV ! (PV: %d/%d)\n",
+			c.Nom, p.Nom, p.Effet, c.PV, c.PVBase)
+	}
+
+
+	c.Inventory = append(c.Inventory[:index], c.Inventory[index+1:]...)
+}
+>>>>>>> dd8218059ba14bba7b12a82c74841a9837625ad8
