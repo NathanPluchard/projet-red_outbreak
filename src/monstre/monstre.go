@@ -109,19 +109,30 @@ func CombatSpellMenu(c *classes.Classe, m *Monster) {
 	}
 	c.Mana -= info.ManaCost
 
-	m.CurrentHP -= info.Damage
+	// Les dégâts de base de l'attaque + l'attaque du personnage
+	damage := info.Damage + c.AttaqueBase
+
+	m.CurrentHP -= damage
 	if m.CurrentHP < 0 {
 		m.CurrentHP = 0
 	}
-	fmt.Printf("%s inflige %d dégâts à %s avec %s\n", c.Nom, info.Damage, m.Name, info.Name)
+	fmt.Printf("%s inflige %d dégâts à %s avec %s\n", c.Nom, damage, m.Name, info.Name)
 	fmt.Printf("%s : PV %d / %d\n", m.Name, m.CurrentHP, m.MaxHP)
 }
 
 func GoblinPattern(m *Monster, c *classes.Classe, turn int) {
-	damage := m.Attack
+	baseDamage := m.Attack
 	if turn%3 == 0 {
-		damage = m.Attack * 2
+		baseDamage = m.Attack * 2
 	}
+
+	// La défense réduit les dégâts subis, sans jamais descendre sous 1
+	reduction := c.DefenseBase / 2
+	damage := baseDamage - reduction
+	if damage < 1 {
+		damage = 1
+	}
+
 	c.PV -= damage
 	if c.PV < 0 {
 		c.PV = 0
