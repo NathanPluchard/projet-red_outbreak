@@ -111,7 +111,7 @@ func mainMenu(c *classes.Classe) {
 }
 
 func main() {
-	fmt.Println("====Bienvenue cher survivant veillez choisir un nom")
+	fmt.Println("====Bienvenue cher survivant veillez choisir un nom====")
 	fmt.Println("=====DEPART=======")
 	c1 := characterCreation()
 	mainMenu(&c1)
