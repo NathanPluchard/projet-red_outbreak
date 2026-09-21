@@ -4,6 +4,7 @@ type Classe struct {
 	Nom         string
 	Description string
 	PVBase      int
+	MaxHP       int
 	Gold 		int
 	Exp 		int
 	MaxExp 		int 
@@ -19,6 +20,7 @@ var Classes = map[string]Classe{
 		Nom:         "Survivant",
 		Description: "Généraliste équilibré, doué pour durer sur la longueur.",
 		PVBase:      200,
+		MaxHP:       200,
 		Gold:         15,
 		Exp:		 0,
 		MaxExp:      100,
@@ -32,6 +34,7 @@ var Classes = map[string]Classe{
 		Nom:         "Punk",
 		Description: "Combattant agressif et instable, frappe fort mais encaisse mal.",
 		PVBase:      150,
+		MaxHP:       150,
 		Gold:        40,
 		Exp:         0,
 		MaxExp:      300,
@@ -45,6 +48,7 @@ var Classes = map[string]Classe{
 		Nom:         "Médecin de fortune",
 		Description: "Support de l'équipe, moins offensif mais indispensable en soin.",
 		PVBase:      100,
+		MaxHP:       100,
 		Gold:         20,
 		Exp:          0,
 		MaxExp:       50,
@@ -58,6 +62,7 @@ var Classes = map[string]Classe{
 		Nom:         "Sauveur",
 		Description: "Protecteur robuste, pensé pour encaisser et défendre le groupe.",
 		PVBase:      80,
+		MaxHP:       80,
 		Gold:         30,
 		Exp:          0,
 		MaxExp:       200,
@@ -68,3 +73,4 @@ var Classes = map[string]Classe{
 		Specialite:  "Réduction de dégâts subis par l'équipe",
 	},
 }
+

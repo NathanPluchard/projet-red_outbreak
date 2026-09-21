@@ -12,6 +12,7 @@ type ShopItem struct {
 func merchant(c *Classe) {
 	items := []ShopItem{
 		{"Kit de chirurgie de fortune", 40},
+		{"Fibre de carbone", 30}, 
 		{"Acier", 15},
 		{"Bois", 10},
 		{"Tissu", 5},
@@ -20,7 +21,11 @@ func merchant(c *Classe) {
 		{"Bandage militaire", 10},
 		{"Pansement compressif", 7},
 		{"Poche d'adrélanine", 5},
-
+		{"Poison à explosion différée", 30 },
+		{"Poison à stacks", 20},
+		{"Poison paralysant", 15}, 
+		{"Poison affaiblissant", 10},
+		{"Poison à dégâts sur la durée", 5},
 	}
 
 	for {

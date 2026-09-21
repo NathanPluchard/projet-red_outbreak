@@ -19,7 +19,7 @@ var armorTiers = []ArmorTiers {
 	{2, "Survivant", "Casque de chantier renforcé", "Veste tactique légère", "Bottes de randonnée renforcées", map[string]int{"Tissu" : 5, "Bois" : 3, "Acier" : 1, "Plume" : 2}, 20},
 	{3, "Soldat", "Casque tactique", "Gilet tactique renforcé", "Bottes tactiques", map[string]int{"Tissu" : 4, "Bois" : 2, "Acier" : 4, "Plume" : 2}, 35},
 	{4, "Tank", "Casque balistique", "Armure à plaques", "Bottes blindées", map[string]int{"Tissu" : 3, "Bois" : 1, "Acier" : 8, "Plume" : 3}, 55},
-	{5, "Légendaire", "Casque intégral composite", "Armure anti-zombies", "Bottes renforcées composites", map[string]int{"Tissu" : 2, "Acier" : 12, "Plume" : 4}, 90},
+	{5, "Légendaire", "Casque intégral composite", "Armure anti-zombies", "Bottes renforcées composites", map[string]int{"Tissu" : 2, "Fibre de carbone" : 12, "Plume" : 4}, 90},
 }
 
 func blacksmithTiers (c *Classe) {
