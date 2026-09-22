@@ -193,17 +193,15 @@ func Panel(
 		dashes = 1
 	}
 
-	builder.WriteString(
-		Bold +
-			BrightBlue +
-			"┌─ " +
-			title +
-			" " +
-			strings.Repeat("─", dashes) +
-			"┐" +
-			Reset +
-			"\n",
-	)
+	builder.WriteString(Bold)
+	builder.WriteString(BrightBlue)
+	builder.WriteString("┌─ ")
+	builder.WriteString(title)
+	builder.WriteString(" ")
+	builder.WriteString(strings.Repeat("─", dashes))
+	builder.WriteString("┐")
+	builder.WriteString(Reset)
+	builder.WriteString("\n")
 
 	for _, line := range lines {
 
@@ -215,22 +213,18 @@ func Panel(
 			padding = 0
 		}
 
-		builder.WriteString(
-			"│ " +
-				line +
-				strings.Repeat(" ", padding) +
-				" │\n",
-		)
+		builder.WriteString("│ ")
+		builder.WriteString(line)
+		builder.WriteString(strings.Repeat(" ", padding))
+		builder.WriteString(" │\n")
 	}
 
-	builder.WriteString(
-		Bold +
-			BrightBlue +
-			"└" +
-			strings.Repeat("─", 58) +
-			"┘" +
-			Reset,
-	)
+	builder.WriteString(Bold)
+	builder.WriteString(BrightBlue)
+	builder.WriteString("└")
+	builder.WriteString(strings.Repeat("─", 58))
+	builder.WriteString("┘")
+	builder.WriteString(Reset)
 
 	return builder.String()
 
