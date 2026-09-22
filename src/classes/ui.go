@@ -1,13 +1,16 @@
 package classes
 
-import "strings"
-
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 const (
-	Reset   = "\033[0m"
-	Bold    = "\033[1m"
-	Dim     = "\033[2m"
-	Italic  = "\033[3m"
+	Reset  = "\033[0m"
+	Bold   = "\033[1m"
+	Dim    = "\033[2m"
+	Italic = "\033[3m"
 
 	Red     = "\033[31m"
 	Green   = "\033[32m"
@@ -17,13 +20,13 @@ const (
 	Cyan    = "\033[36m"
 	White   = "\033[37m"
 
-	BrightRed    = "\033[91m"
-	BrightGreen  = "\033[92m"
-	BrightYellow = "\033[93m"
-	BrightBlue   = "\033[94m"
+	BrightRed     = "\033[91m"
+	BrightGreen   = "\033[92m"
+	BrightYellow  = "\033[93m"
+	BrightBlue    = "\033[94m"
 	BrightMagenta = "\033[95m"
-	BrightCyan   = "\033[96m"
-	BrightWhite  = "\033[97m"
+	BrightCyan    = "\033[96m"
+	BrightWhite   = "\033[97m"
 )
 
 // ratio calcule un pourcentage borné entre 0 et 1.
@@ -41,7 +44,6 @@ func ratio(current, max int) float64 {
 	return r
 }
 
-
 func bar(current, max, width int, color string) string {
 	r := ratio(current, max)
 	filled := int(r * float64(width))
@@ -52,7 +54,6 @@ func bar(current, max, width int, color string) string {
 	empty := strings.Repeat("░", width-filled)
 	return color + full + Reset + Dim + empty + Reset
 }
-
 
 func HPBar(current, max int) string {
 	r := ratio(current, max)
@@ -66,7 +67,6 @@ func HPBar(current, max int) string {
 	return "[" + bar(current, max, 20, color) + "]"
 }
 
-
 func ManaBar(current, max int) string {
 	return "[" + bar(current, max, 20, Cyan) + "]"
 }
@@ -76,11 +76,9 @@ func ExpBar(current, max int) string {
 	return "[" + bar(current, max, 20, Magenta) + "]"
 }
 
-
 func Separator() string {
 	return Dim + strings.Repeat("─", 48) + Reset
 }
-
 
 func TitleBox(title string) string {
 	inner := " " + title + " "
@@ -91,7 +89,14 @@ func TitleBox(title string) string {
 	return Bold + BrightCyan + top + "\n" + mid + "\n" + bot + Reset
 }
 
-
 func Colorize(color, text string) string {
 	return color + text + Reset
+}
+
+func TypeWriter(text string, delay time.Duration) {
+	for _, c := range text {
+		fmt.Print(string(c))
+		time.Sleep(delay)
+	}
+	fmt.Println()
 }
