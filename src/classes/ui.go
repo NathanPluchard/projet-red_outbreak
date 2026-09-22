@@ -71,7 +71,6 @@ func ManaBar(current, max int) string {
 	return "[" + bar(current, max, 20, Cyan) + "]"
 }
 
-// ExpBar retourne une barre d'expérience magenta.
 func ExpBar(current, max int) string {
 	return "[" + bar(current, max, 20, Magenta) + "]"
 }
