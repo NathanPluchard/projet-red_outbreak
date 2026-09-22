@@ -63,6 +63,7 @@ func characterCreation() classes.Classe {
 	}
 
 	perso := classes.Classes[nomClasse]
+	perso.Type = nomClasse
 	perso.Nom = nom
 	perso.PV = perso.PVBase
 	perso.Level = 1

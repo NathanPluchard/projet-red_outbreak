@@ -48,11 +48,16 @@ func UtiliserPotion(c *classes.Classe, nomPotion string) {
 
 	switch p.Type {
 	case "vie":
-		c.PV += p.Effet
+		soin := p.Effet
+		// Spécialité Médecin de fortune : efficacité de soin augmentée (+50%)
+		if c.Type == "Médecin de fortune" {
+			soin = soin * 150 / 100
+		}
+		c.PV += soin
 		if c.PV > c.PVBase {
 			c.PV = c.PVBase
 		}
-		fmt.Printf("%s utilise %s et regagne %d PV ! (PV: %d/%d)\n", c.Nom, p.Nom, p.Effet, c.PV, c.PVBase)
+		fmt.Printf("%s utilise %s et regagne %d PV ! (PV: %d/%d)\n", c.Nom, p.Nom, soin, c.PV, c.PVBase)
 	case "poison":
 		c.PV -= p.Effet
 		if c.PV < 0 {

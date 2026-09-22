@@ -221,6 +221,11 @@ func CombatSpellMenu(c *classes.Classe, m *Monster) {
 
 	damage := info.Damage + c.AttaqueBase
 
+	if c.Type == "Punk" && rand.Intn(4) == 0 {
+		damage = damage * 3 / 2
+		fmt.Println("Coup critique !")
+	}
+
 	m.CurrentHP -= damage
 	if m.CurrentHP < 0 {
 		m.CurrentHP = 0
@@ -237,6 +242,11 @@ func GoblinPattern(m *Monster, c *classes.Classe, turn int) {
 
 	reduction := c.DefenseBase / 2
 	damage := baseDamage - reduction
+
+	if c.Type == "Sauveur" {
+		damage = damage * 80 / 100
+	}
+
 	if damage < 1 {
 		damage = 1
 	}
@@ -275,6 +285,19 @@ func TrainingFight(c *classes.Classe) {
 
 	for {
 		fmt.Println("=== Tour", turn, "===")
+
+		if c.Type == "Survivant" && c.PV > 0 {
+			regen := c.PVBase / 25
+			if regen < 1 {
+				regen = 1
+			}
+			c.PV += regen
+			if c.PV > c.PVBase {
+				c.PV = c.PVBase
+			}
+			fmt.Printf("%s récupère %d PV grâce à sa résistance. (PV : %d / %d)\n", c.Nom, regen, c.PV, c.PVBase)
+		}
+
 		if playerFirst {
 			CharacterTurn(c, &monster)
 			if monster.CurrentHP <= 0 {
@@ -296,4 +319,7 @@ func TrainingFight(c *classes.Classe) {
 	fmt.Println(monster.Name, "est vaincu !")
 	GainExp(c, monster.ExpReward)
 	GainGold(c, monster.GoldReward)
+
+	c.Mana = c.ManaMax
+	fmt.Printf("Vous reprenez votre souffle, mana restauré. (Mana : %d / %d)\n", c.Mana, c.ManaMax)
 }
