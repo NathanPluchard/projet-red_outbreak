@@ -35,7 +35,7 @@ var Upgrades = []Upgrade{
 		Cost:        100,
 		Level:       3,
 		Damage:      0,
-		Defense:      3,
+		Defense:     3,
 	},
 	{
 		Name:        "Arme militaire",
@@ -51,7 +51,7 @@ var Upgrades = []Upgrade{
 		Cost:        225,
 		Level:       7,
 		Damage:      0,
-		Defense:      7,
+		Defense:     7,
 	},
 	{
 		Name:        "Équipement d'élite",
@@ -59,7 +59,7 @@ var Upgrades = []Upgrade{
 		Cost:        400,
 		Level:       10,
 		Damage:      12,
-		Defense:      12,
+		Defense:     12,
 	},
 }
 
@@ -413,4 +413,63 @@ func upgradeEquipment(c *classes.Classe) {
 	)
 
 	classes.Pause()
+}
+
+// ============================================================
+// COMPATIBILITÉ AVEC L'INVENTAIRE
+// ============================================================
+
+type TierSlot struct {
+	Name string
+	Slot string
+}
+
+// Equipment conserve les équipements disponibles dans la forge.
+// Il est utilisé par l'inventaire pour reconnaître un équipement.
+var Equipment = []string{
+	"Casque renforcé",
+	"Gilet pare-balles",
+	"Bottes tactiques",
+	"Casque militaire",
+	"Armure militaire",
+	"Bottes militaires",
+}
+
+var tierSlots = map[string]TierSlot{
+	"Casque renforcé":   {Name: "Casque renforcé", Slot: "head"},
+	"Gilet pare-balles": {Name: "Gilet pare-balles", Slot: "torso"},
+	"Bottes tactiques":  {Name: "Bottes tactiques", Slot: "feet"},
+	"Casque militaire":  {Name: "Casque militaire", Slot: "head"},
+	"Armure militaire":  {Name: "Armure militaire", Slot: "torso"},
+	"Bottes militaires": {Name: "Bottes militaires", Slot: "feet"},
+}
+
+func FindTierSlot(item string) (*TierSlot, bool) {
+	tier, ok := tierSlots[item]
+	if !ok {
+		return nil, false
+	}
+	return &tier, true
+}
+
+func EquipItem(c *classes.Classe, item string) bool {
+	tier, ok := FindTierSlot(item)
+	if !ok {
+		return false
+	}
+
+	switch tier.Slot {
+	case "head":
+		c.Equip.Head = item
+	case "torso":
+		c.Equip.Torso = item
+	case "feet":
+		c.Equip.Feet = item
+	default:
+		return false
+	}
+
+	classes.RemoveInventory(c, item)
+	fmt.Printf("%s%s équipé !%s\n", classes.BrightGreen, item, classes.Reset)
+	return true
 }

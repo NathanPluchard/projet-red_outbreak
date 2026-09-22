@@ -1,13 +1,11 @@
 package sort
 
-
 type Sort struct {
 	Nom         string
 	Description string
 	Degats      int
-	CoutMana    int 
+	CoutMana    int
 }
-
 
 func NouveauSort(nom string, degats int, coutMana int, description string) Sort {
 	return Sort{
@@ -19,7 +17,7 @@ func NouveauSort(nom string, degats int, coutMana int, description string) Sort 
 }
 
 var SortsDisponibles = []Sort{
-NouveauSort("Frappe nucléaire improvisée", 100, 50,
+	NouveauSort("Frappe nucléaire improvisée", 100, 50,
 		"Un engin de fortune bricolé avec des matériaux radioactifs, dévaste une large zone."),
 
 	NouveauSort("Tir de sniper longue distance", 80, 30,
