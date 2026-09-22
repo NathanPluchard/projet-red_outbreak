@@ -541,6 +541,25 @@ func cardNames(hand []card) string {
 
 }
 
+func totalWagered(hands []bjHand) int {
+
+	total := 0
+
+	for _, h := range hands {
+		total += h.bet
+	}
+
+	return total
+
+}
+
+type bjHand struct {
+	cards   []card
+	bet     int
+	doubled bool
+	busted  bool
+}
+
 func blackjack(c *classes.Classe) {
 
 	classes.ClearScreen()
@@ -602,119 +621,361 @@ func blackjack(c *classes.Classe) {
 			draw(&deck),
 		}
 
-	for {
+	playerNatural := score(player) == 21
+	dealerNatural := score(dealer) == 21
+
+	// --------------------------------------------------------
+	// BLACKJACK NATUREL (deux premières cartes = 21)
+	// --------------------------------------------------------
+
+	if playerNatural || dealerNatural {
 
 		classes.ClearScreen()
 
 		fmt.Println(
 			classes.TitleBox(
-				"🃏 BLACKJACK",
+				"🃏 RÉSULTAT DU BLACKJACK",
 			),
 		)
 
 		fmt.Println()
 
 		fmt.Printf(
-			"%sVotre main%s\n",
-			classes.Bold,
+			"%sVous%s : %s  → %d\n",
+			classes.BrightCyan,
 			classes.Reset,
-		)
-
-		fmt.Printf(
-			"  %s\n",
 			cardNames(player),
-		)
-
-		fmt.Printf(
-			"  Score : %d\n\n",
 			score(player),
 		)
 
 		fmt.Printf(
-			"%sMain du croupier%s\n",
-			classes.Bold,
-			classes.Reset,
-		)
-
-		fmt.Printf(
-			"  %s  🂠\n",
-			cardName(dealer[0]),
-		)
-
-		fmt.Printf(
-			"\n%sMise : %d 💰%s\n",
+			"%sCroupier%s : %s  → %d\n\n",
 			classes.BrightYellow,
-			bet,
 			classes.Reset,
+			cardNames(dealer),
+			score(dealer),
 		)
 
-		// Le joueur a dépassé 21.
-		if score(player) > 21 {
-			break
-		}
+		switch {
 
-		fmt.Println()
-
-		fmt.Println(
-			classes.Panel(
-				"VOTRE CHOIX",
-
-				"1  Tirer une carte",
-
-				"2  Rester",
-			),
-		)
-
-		fmt.Print(
-			"\nAction > ",
-		)
-
-		choice :=
-			classes.ReadInt()
-
-		switch choice {
-
-		case 1:
-
-			player =
-				append(
-					player,
-					draw(&deck),
-				)
-
-		case 2:
-
-			goto dealerTurn
-
-		default:
+		case playerNatural && dealerNatural:
 
 			fmt.Println(
-				classes.BrightRed +
-					"✖ Choix invalide." +
+				classes.BrightYellow +
+					"↔ Double Blackjack — égalité, votre mise est remboursée." +
 					classes.Reset,
 			)
 
-			classes.Pause()
+		case playerNatural:
+
+			gain := bet * 3 / 2
+
+			c.Gold += gain
+
+			fmt.Println(
+				classes.Bold +
+					classes.BrightGreen +
+					"⚡ BLACKJACK ! ⚡" +
+					classes.Reset,
+			)
+
+			fmt.Printf(
+				"%s+%d 💰%s (paiement 3:2)\n",
+				classes.BrightGreen,
+				gain,
+				classes.Reset,
+			)
+
+		default:
+
+			c.Gold -= bet
+
+			fmt.Printf(
+				"%s✖ Le croupier a Blackjack.%s\n",
+				classes.BrightRed,
+				classes.Reset,
+			)
+
+			fmt.Printf(
+				"%s-%d 💰%s\n",
+				classes.BrightRed,
+				bet,
+				classes.Reset,
+			)
+		}
+
+		fmt.Printf(
+			"\nPortefeuille : %s%d 💰%s\n",
+			classes.BrightYellow,
+			c.Gold,
+			classes.Reset,
+		)
+
+		classes.Pause()
+
+		return
+	}
+
+	// --------------------------------------------------------
+	// TOUR DU JOUEUR (tirer / rester / doubler / split)
+	// --------------------------------------------------------
+
+	// Capacité fixée à 2 : un seul split est autorisé, donc la
+	// tranche "hands" ne dépassera jamais 2 éléments. Cela évite
+	// qu'un append() ne la réalloue et n'invalide le pointeur "h"
+	// utilisé plus bas.
+	hands := make([]bjHand, 1, 2)
+	hands[0] = bjHand{cards: player, bet: bet}
+
+	i := 0
+
+	for i < len(hands) {
+
+		h := &hands[i]
+
+	handLoop:
+		for {
+
+			classes.ClearScreen()
+
+			fmt.Println(
+				classes.TitleBox(
+					"🃏 BLACKJACK",
+				),
+			)
+
+			fmt.Println()
+
+			if len(hands) > 1 {
+
+				fmt.Printf(
+					"%sMain %d/%d%s\n\n",
+					classes.Bold,
+					i+1,
+					len(hands),
+					classes.Reset,
+				)
+			}
+
+			fmt.Printf(
+				"%sVotre main%s\n",
+				classes.Bold,
+				classes.Reset,
+			)
+
+			fmt.Printf(
+				"  %s\n",
+				cardNames(h.cards),
+			)
+
+			fmt.Printf(
+				"  Score : %d\n\n",
+				score(h.cards),
+			)
+
+			fmt.Printf(
+				"%sMain du croupier%s\n",
+				classes.Bold,
+				classes.Reset,
+			)
+
+			fmt.Printf(
+				"  %s  🂠\n",
+				cardName(dealer[0]),
+			)
+
+			fmt.Printf(
+				"\n%sMise sur cette main : %d 💰%s\n",
+				classes.BrightYellow,
+				h.bet,
+				classes.Reset,
+			)
+
+			if score(h.cards) > 21 {
+				h.busted = true
+				break handLoop
+			}
+
+			canDouble :=
+				len(h.cards) == 2 &&
+					!h.doubled &&
+					c.Gold >= totalWagered(hands)+h.bet
+
+			canSplit :=
+				len(hands) == 1 &&
+					len(h.cards) == 2 &&
+					h.cards[0].value() == h.cards[1].value() &&
+					c.Gold >= totalWagered(hands)+h.bet
+
+			fmt.Println()
+
+			options :=
+				[]string{
+					"1  Tirer une carte",
+					"2  Rester",
+				}
+
+			if canDouble {
+				options =
+					append(
+						options,
+						"3  Doubler la mise",
+					)
+			}
+
+			if canSplit {
+				options =
+					append(
+						options,
+						"4  Split",
+					)
+			}
+
+			fmt.Println(
+				classes.Panel(
+					"VOTRE CHOIX",
+					options...,
+				),
+			)
+
+			fmt.Print(
+				"\nAction > ",
+			)
+
+			choice :=
+				classes.ReadInt()
+
+			switch choice {
+
+			case 1:
+
+				h.cards =
+					append(
+						h.cards,
+						draw(&deck),
+					)
+
+			case 2:
+
+				break handLoop
+
+			case 3:
+
+				if !canDouble {
+
+					fmt.Println(
+						classes.BrightRed +
+							"✖ Choix invalide." +
+							classes.Reset,
+					)
+
+					classes.Pause()
+
+					continue handLoop
+				}
+
+				h.bet *= 2
+				h.doubled = true
+
+				h.cards =
+					append(
+						h.cards,
+						draw(&deck),
+					)
+
+				if score(h.cards) > 21 {
+					h.busted = true
+				}
+
+				break handLoop
+
+			case 4:
+
+				if !canSplit {
+
+					fmt.Println(
+						classes.BrightRed +
+							"✖ Choix invalide." +
+							classes.Reset,
+					)
+
+					classes.Pause()
+
+					continue handLoop
+				}
+
+				second :=
+					bjHand{
+						cards: []card{h.cards[1]},
+						bet:   h.bet,
+					}
+
+				h.cards =
+					[]card{h.cards[0]}
+
+				h.cards =
+					append(
+						h.cards,
+						draw(&deck),
+					)
+
+				second.cards =
+					append(
+						second.cards,
+						draw(&deck),
+					)
+
+				hands =
+					append(
+						hands,
+						second,
+					)
+
+			default:
+
+				fmt.Println(
+					classes.BrightRed +
+						"✖ Choix invalide." +
+						classes.Reset,
+				)
+
+				classes.Pause()
+			}
+		}
+
+		i++
+	}
+
+	// --------------------------------------------------------
+	// TOUR DU CROUPIER
+	// --------------------------------------------------------
+
+	anyoneAlive := false
+
+	for _, h := range hands {
+		if !h.busted {
+			anyoneAlive = true
 		}
 	}
 
-dealerTurn:
+	if anyoneAlive {
 
-	for score(player) <= 21 &&
-		score(dealer) < 17 {
+		for score(dealer) < 17 {
 
-		dealer =
-			append(
-				dealer,
-				draw(&deck),
-			)
+			dealer =
+				append(
+					dealer,
+					draw(&deck),
+				)
+		}
 	}
-
-	playerScore :=
-		score(player)
 
 	dealerScore :=
 		score(dealer)
+
+	// --------------------------------------------------------
+	// RÉSULTATS
+	// --------------------------------------------------------
 
 	classes.ClearScreen()
 
@@ -727,14 +988,6 @@ dealerTurn:
 	fmt.Println()
 
 	fmt.Printf(
-		"%sVous%s : %s  → %d\n",
-		classes.BrightCyan,
-		classes.Reset,
-		cardNames(player),
-		playerScore,
-	)
-
-	fmt.Printf(
 		"%sCroupier%s : %s  → %d\n\n",
 		classes.BrightYellow,
 		classes.Reset,
@@ -742,87 +995,92 @@ dealerTurn:
 		dealerScore,
 	)
 
-	switch {
+	for idx, h := range hands {
 
-	case playerScore > 21:
+		handScore := score(h.cards)
 
-		c.Gold -= bet
+		if len(hands) > 1 {
 
-		fmt.Printf(
-			"%s✖ Vous dépassez 21.%s\n",
-			classes.BrightRed,
-			classes.Reset,
-		)
-
-		fmt.Printf(
-			"%s-%d 💰%s\n",
-			classes.BrightRed,
-			bet,
-			classes.Reset,
-		)
-
-	case dealerScore > 21:
-
-		c.Gold += bet
-
-		fmt.Printf(
-			"%s✔ Le croupier dépasse 21 !%s\n",
-			classes.BrightGreen,
-			classes.Reset,
-		)
-
-		fmt.Printf(
-			"%s+%d 💰%s\n",
-			classes.BrightGreen,
-			bet,
-			classes.Reset,
-		)
-
-	case playerScore > dealerScore:
-
-		c.Gold += bet
-
-		fmt.Printf(
-			"%s✔ VOUS GAGNEZ !%s\n",
-			classes.BrightGreen,
-			classes.Reset,
-		)
-
-		fmt.Printf(
-			"%s+%d 💰%s\n",
-			classes.BrightGreen,
-			bet,
-			classes.Reset,
-		)
-
-	case playerScore == dealerScore:
-
-		fmt.Println(
-			classes.BrightYellow +
-				"↔ ÉGALITÉ — votre mise est remboursée." +
+			fmt.Printf(
+				"%sMain %d%s : %s  → %d\n",
+				classes.Bold,
+				idx+1,
 				classes.Reset,
-		)
+				cardNames(h.cards),
+				handScore,
+			)
 
-	default:
+		} else {
 
-		c.Gold -= bet
+			fmt.Printf(
+				"%sVous%s : %s  → %d\n",
+				classes.BrightCyan,
+				classes.Reset,
+				cardNames(h.cards),
+				handScore,
+			)
+		}
 
-		fmt.Printf(
-			"%s✖ Le croupier gagne.%s\n",
-			classes.BrightRed,
-			classes.Reset,
-		)
+		switch {
 
-		fmt.Printf(
-			"%s-%d 💰%s\n",
-			classes.BrightRed,
-			bet,
-			classes.Reset,
-		)
+		case h.busted:
+
+			c.Gold -= h.bet
+
+			fmt.Printf(
+				"  %s✖ Dépassé 21 — -%d 💰%s\n",
+				classes.BrightRed,
+				h.bet,
+				classes.Reset,
+			)
+
+		case dealerScore > 21:
+
+			c.Gold += h.bet
+
+			fmt.Printf(
+				"  %s✔ Le croupier dépasse 21 — +%d 💰%s\n",
+				classes.BrightGreen,
+				h.bet,
+				classes.Reset,
+			)
+
+		case handScore > dealerScore:
+
+			c.Gold += h.bet
+
+			fmt.Printf(
+				"  %s✔ Vous gagnez — +%d 💰%s\n",
+				classes.BrightGreen,
+				h.bet,
+				classes.Reset,
+			)
+
+		case handScore == dealerScore:
+
+			fmt.Printf(
+				"  %s↔ Égalité — mise remboursée%s\n",
+				classes.BrightYellow,
+				classes.Reset,
+			)
+
+		default:
+
+			c.Gold -= h.bet
+
+			fmt.Printf(
+				"  %s✖ Le croupier gagne — -%d 💰%s\n",
+				classes.BrightRed,
+				h.bet,
+				classes.Reset,
+			)
+		}
+
+		fmt.Println()
 	}
 
 	fmt.Printf(
-		"\nPortefeuille : %s%d 💰%s\n",
+		"Portefeuille : %s%d 💰%s\n",
 		classes.BrightYellow,
 		c.Gold,
 		classes.Reset,
