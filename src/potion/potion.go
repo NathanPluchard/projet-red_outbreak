@@ -57,13 +57,13 @@ func UtiliserPotion(c *classes.Classe, nomPotion string) {
 		if c.PV > c.PVBase {
 			c.PV = c.PVBase
 		}
-		fmt.Printf("%s utilise %s et regagne %d PV ! (PV: %d/%d)\n", c.Nom, p.Nom, soin, c.PV, c.PVBase)
+		fmt.Printf("%s%s utilise %s et regagne %d PV !%s (PV : %s %d/%d)\n", classes.BrightGreen, c.Nom, p.Nom, soin, classes.Reset, classes.HPBar(c.PV, c.PVBase), c.PV, c.PVBase)
 	case "poison":
 		c.PV -= p.Effet
 		if c.PV < 0 {
 			c.PV = 0
 		}
-		fmt.Printf("%s subit %s et perd %d PV ! (PV: %d/%d)\n", c.Nom, p.Nom, p.Effet, c.PV, c.PVBase)
+		fmt.Printf("%s%s subit %s et perd %d PV !%s (PV : %s %d/%d)\n", classes.BrightRed, c.Nom, p.Nom, p.Effet, classes.Reset, classes.HPBar(c.PV, c.PVBase), c.PV, c.PVBase)
 	}
 
 	c.Inventory = append(c.Inventory[:index], c.Inventory[index+1:]...)
