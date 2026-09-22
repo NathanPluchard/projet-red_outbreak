@@ -1,9 +1,6 @@
 package potion
 
-import "fmt"
-
 func NouvellePotionDeVie(nom string, soin int, description string) Potion {
-	_ = fmt.Sprintf // (fmt reste utilisé plus bas si besoin ; sinon retire l'import)
 	return Potion{
 		Nom:         nom,
 		Description: description,

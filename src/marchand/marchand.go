@@ -14,6 +14,10 @@ type Item struct {
 	Name        string
 	Description string
 	Price       int
+	// ToInventory indique que l'objet doit être ajouté à
+	// l'inventaire du survivant (équipement, sac à dos...)
+	// au lieu d'être appliqué instantanément.
+	ToInventory bool
 }
 
 // Objets disponibles chez le marchand.
@@ -42,6 +46,48 @@ var Items = []Item{
 		Name:        "Kit de survie",
 		Description: "Restaure PV et mana.",
 		Price:       80,
+	},
+	{
+		Name:        "Casque renforcé",
+		Description: "Casque. À équiper depuis l'inventaire.",
+		Price:       60,
+		ToInventory: true,
+	},
+	{
+		Name:        "Gilet pare-balles",
+		Description: "Torse. À équiper depuis l'inventaire.",
+		Price:       90,
+		ToInventory: true,
+	},
+	{
+		Name:        "Bottes tactiques",
+		Description: "Pieds. À équiper depuis l'inventaire.",
+		Price:       60,
+		ToInventory: true,
+	},
+	{
+		Name:        "Casque militaire",
+		Description: "Casque supérieur. À équiper depuis l'inventaire.",
+		Price:       140,
+		ToInventory: true,
+	},
+	{
+		Name:        "Armure militaire",
+		Description: "Torse supérieur. À équiper depuis l'inventaire.",
+		Price:       200,
+		ToInventory: true,
+	},
+	{
+		Name:        "Bottes militaires",
+		Description: "Pieds supérieurs. À équiper depuis l'inventaire.",
+		Price:       140,
+		ToInventory: true,
+	},
+	{
+		Name:        "Sac à dos militaire supplémentaire",
+		Description: "Augmente la capacité d'inventaire de 10 (utiliser depuis l'inventaire).",
+		Price:       120,
+		ToInventory: true,
 	},
 }
 
@@ -237,6 +283,48 @@ func buyItem(c *classes.Classe) {
 				classes.BrightRed +
 				"✖ Vous n'avez pas assez d'or." +
 				classes.Reset,
+		)
+
+		classes.Pause()
+
+		return
+	}
+
+	// --------------------------------------------------------
+	// OBJET D'INVENTAIRE (équipement, sac à dos...)
+	// --------------------------------------------------------
+
+	if item.ToInventory {
+
+		if !classes.CanAddItem(c) {
+
+			fmt.Println(
+				"\n" +
+					classes.BrightRed +
+					"✖ Inventaire plein, impossible d'acheter cet objet." +
+					classes.Reset,
+			)
+
+			classes.Pause()
+
+			return
+		}
+
+		c.Gold -= item.Price
+		classes.AddInventory(c, item.Name)
+
+		fmt.Printf(
+			"\n%sVous avez acheté : %s%s\n",
+			classes.Bold,
+			item.Name,
+			classes.Reset,
+		)
+
+		fmt.Printf(
+			"Or restant : %s%d 💰%s\n",
+			classes.BrightYellow,
+			c.Gold,
+			classes.Reset,
 		)
 
 		classes.Pause()
