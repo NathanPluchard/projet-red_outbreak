@@ -153,7 +153,7 @@ func BlacksmithTiers(c *classes.Classe) {
 // AFFICHAGE
 // ============================================================
 
-func displayUpgrades(c *classes.Classe) {
+func displayUpgrades(_ *classes.Classe) {
 
 	classes.ClearScreen()
 
