@@ -3,6 +3,10 @@ package classes
 import (
 	"fmt"
 	"strings"
+<<<<<<< HEAD
+=======
+	"time"
+>>>>>>> origin/main
 )
 
 const (
@@ -37,6 +41,7 @@ func max(a, b int) int {
 
 }
 
+<<<<<<< HEAD
 func ClearScreen() {
 	fmt.Print("\033[2J\033[H")
 }
@@ -82,6 +87,10 @@ func bar(
 
 	r := ratio(current, maximum)
 
+=======
+func bar(current, max, width int, color string) string {
+	r := ratio(current, max)
+>>>>>>> origin/main
 	filled := int(r * float64(width))
 
 	if filled > width {
@@ -96,10 +105,15 @@ func bar(
 
 }
 
+<<<<<<< HEAD
 func HPBar(current, maximum int) string {
 
 	r := ratio(current, maximum)
 
+=======
+func HPBar(current, max int) string {
+	r := ratio(current, max)
+>>>>>>> origin/main
 	color := Green
 
 	if r <= 0.25 {
@@ -119,6 +133,7 @@ func HPBar(current, maximum int) string {
 
 }
 
+<<<<<<< HEAD
 func ManaBar(current, maximum int) string {
 
 	return "[" +
@@ -130,10 +145,15 @@ func ManaBar(current, maximum int) string {
 		) +
 		"]"
 
+=======
+func ManaBar(current, max int) string {
+	return "[" + bar(current, max, 20, Cyan) + "]"
+>>>>>>> origin/main
 }
 
 func ExpBar(current, maximum int) string {
 
+<<<<<<< HEAD
 	return "[" +
 		bar(
 			current,
@@ -145,14 +165,19 @@ func ExpBar(current, maximum int) string {
 
 }
 
+=======
+>>>>>>> origin/main
 func Separator() string {
 
+<<<<<<< HEAD
 	return Dim +
 		strings.Repeat("─", 58) +
 		Reset
 
 }
 
+=======
+>>>>>>> origin/main
 func TitleBox(title string) string {
 
 	inner := " " + title + " "
@@ -177,6 +202,7 @@ func TitleBox(title string) string {
 	return Bold + BrightCyan + top + "\n" + middle + "\n" + bottom + Reset
 
 }
+
 
 func Panel(
 	title string,
@@ -238,4 +264,21 @@ func Colorize(
 	return color +
 		text +
 		Reset
+}
+func Colorize(
+	color string,
+	text string,
+) string {
+
+	return color +
+		text +
+		Reset
+}
+
+func TypeWriter(text string, delay time.Duration) {
+	for _, c := range text {
+		fmt.Print(string(c))
+		time.Sleep(delay)
+	}
+	fmt.Println()
 }
