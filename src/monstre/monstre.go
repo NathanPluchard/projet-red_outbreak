@@ -140,8 +140,23 @@ type AttackInfo struct {
 
 var AllAttacks = []AttackInfo{
 	{"Attaque basique", 5, 0, 1},
+	{"Coup de coude", 7, 0, 2},
 	{"Crosse de fusil", 8, 0, 3},
+	{"Lancer de couteau", 10, 3, 4},
 	{"Cocktail Molotov", 18, 10, 5},
+	{"Tir de pistolet", 14, 6, 6},
+	{"Machette rouillée", 16, 4, 7},
+	{"Rafale de fusil d'assaut", 20, 12, 8},
+	{"Grenade artisanale", 24, 15, 9},
+	{"Tir de fusil à pompe", 22, 9, 10},
+	{"Batte cloutée", 19, 5, 11},
+	{"Piège à mines improvisé", 28, 16, 12},
+	{"Tronçonneuse", 26, 10, 13},
+	{"Tir de sniper", 32, 18, 14},
+	{"Lance-flammes de fortune", 30, 20, 15},
+	{"Frappe explosive au C4", 42, 28, 16},
+	{"Rafale de mitrailleuse lourde", 38, 24, 17},
+	{"Tir groupé au lance-roquettes", 55, 35, 18},
 }
 
 func GetAttackInfo(name string) *AttackInfo {
@@ -171,6 +186,8 @@ func GainExp(c *classes.Classe, exp int) {
 		c.MaxExp += 20
 		c.PVBase += 10
 		c.PV = c.PVBase
+		c.ManaMax += 5
+		c.Mana = c.ManaMax
 		fmt.Println("Niveau supérieur ! Vous êtes maintenant niveau", c.Level)
 		for _, atk := range AllAttacks {
 			if atk.UnlockLevel == c.Level && !contains(c.Attacks, atk.Name) {
@@ -243,6 +260,7 @@ func GoblinPattern(m *Monster, c *classes.Classe, turn int) {
 	reduction := c.DefenseBase / 2
 	damage := baseDamage - reduction
 
+	
 	if c.Type == "Sauveur" {
 		damage = damage * 80 / 100
 	}
@@ -320,6 +338,7 @@ func TrainingFight(c *classes.Classe) {
 	GainExp(c, monster.ExpReward)
 	GainGold(c, monster.GoldReward)
 
+	
 	c.Mana = c.ManaMax
 	fmt.Printf("Vous reprenez votre souffle, mana restauré. (Mana : %d / %d)\n", c.Mana, c.ManaMax)
 }
