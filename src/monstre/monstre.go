@@ -2,6 +2,7 @@ package monstre
 
 import (
 	"fmt"
+	"math/rand"
 
 	"outbreak/classes"
 	"outbreak/inventaire"
@@ -18,7 +19,120 @@ type Monster struct {
 }
 
 func InitGoblin() Monster {
-	return Monster{Name: "Zombie errant", MaxHP: 40, CurrentHP: 40, Attack: 5, Initiative: 3, ExpReward: 30, GoldReward: 15}
+	return Monster{
+		Name:       "Zombie errant",
+		MaxHP:      40,
+		CurrentHP:  40,
+		Attack:     5,
+		Initiative: 3,
+		ExpReward:  30,
+		GoldReward: 15,
+	}
+}
+
+func InitZombieBlinde() Monster {
+	return Monster{
+		Name:       "Zombie blindé",
+		MaxHP:      75,
+		CurrentHP:  75,
+		Attack:     8,
+		Initiative: 2,
+		ExpReward:  60,
+		GoldReward: 30,
+	}
+}
+
+func InitCoureur() Monster {
+	return Monster{
+		Name:       "Coureur infecté",
+		MaxHP:      90,
+		CurrentHP:  90,
+		Attack:     13,
+		Initiative: 8,
+		ExpReward:  90,
+		GoldReward: 45,
+	}
+}
+
+func InitBrute() Monster {
+	return Monster{
+		Name:       "Brute mutante",
+		MaxHP:      150,
+		CurrentHP:  150,
+		Attack:     18,
+		Initiative: 2,
+		ExpReward:  130,
+		GoldReward: 70,
+	}
+}
+
+func InitNecromancien() Monster {
+	return Monster{
+		Name:       "Nécromancien infecté",
+		MaxHP:      190,
+		CurrentHP:  190,
+		Attack:     22,
+		Initiative: 4,
+		ExpReward:  200,
+		GoldReward: 110,
+	}
+}
+
+func InitAbomination() Monster {
+	return Monster{
+		Name:       "Abomination",
+		MaxHP:      260,
+		CurrentHP:  260,
+		Attack:     28,
+		Initiative: 2,
+		ExpReward:  300,
+		GoldReward: 180,
+	}
+}
+
+func InitRoiInfectes() Monster {
+	return Monster{
+		Name:       "Roi des infectés",
+		MaxHP:      400,
+		CurrentHP:  400,
+		Attack:     35,
+		Initiative: 6,
+		ExpReward:  500,
+		GoldReward: 300,
+	}
+}
+
+// MonsterEntry associe un générateur de monstre au niveau minimum du
+// joueur à partir duquel ce monstre peut apparaître en entrainement.
+type MonsterEntry struct {
+	Init        func() Monster
+	UnlockLevel int
+}
+
+var AllMonsters = []MonsterEntry{
+	{InitGoblin, 1},
+	{InitZombieBlinde, 3},
+	{InitCoureur, 5},
+	{InitBrute, 7},
+	{InitNecromancien, 9},
+	{InitAbomination, 11},
+	{InitRoiInfectes, 13},
+}
+
+// SelectMonster tire au sort un monstre parmi ceux déjà "débloqués"
+// pour le niveau du joueur (tous les monstres dont UnlockLevel <= level).
+func SelectMonster(level int) Monster {
+	var pool []func() Monster
+	for _, entry := range AllMonsters {
+		if entry.UnlockLevel <= level {
+			pool = append(pool, entry.Init)
+		}
+	}
+	if len(pool) == 0 {
+		pool = append(pool, InitGoblin)
+	}
+	choice := pool[rand.Intn(len(pool))]
+	return choice()
 }
 
 type AttackInfo struct {
@@ -158,7 +272,7 @@ func CharacterTurn(c *classes.Classe, m *Monster) {
 }
 
 func TrainingFight(c *classes.Classe) {
-	monster := InitGoblin()
+	monster := SelectMonster(c.Level)
 	turn := 1
 	fmt.Println("Un", monster.Name, "apparaît !")
 
