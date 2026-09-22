@@ -19,24 +19,26 @@ type Equipement struct {
 type Classe struct {
 	Nom               string
 	Description       string
+	Type              string
+	Specialite        string
 	PVBase            int
-	PV                int
-	Gold              int
-	Exp               int
-	MaxExp            int
 	AttaqueBase       int
 	DefenseBase       int
+	ManaMax           int
+	PV                int
+	Attaque           int
+	Defense           int
+	Mana              int
+	Level             int
+	Exp               int
+	MaxExp            int
+	Gold              int
 	Inventory         []string
 	MaxInventory      int
 	InventoryUpgrades int
-	Mana              int
-	ManaMax           int
-	Level             int
 	Attacks           []string
 	Equip             Equipement
 	Initiative        int
-	Specialite        string
-	Type              string
 }
 
 var Classes = map[string]Classe{
@@ -62,6 +64,23 @@ var Classes = map[string]Classe{
 	},
 }
 
+func NewClasse(nom string) (*Classe, error) {
+	template, ok := Classes[nom]
+	if !ok {
+		return nil, fmt.Errorf("classe inconnue : %q", nom)
+	}
+
+	c := template
+	c.PV = c.PVBase
+	c.Attaque = c.AttaqueBase
+	c.Defense = c.DefenseBase
+	c.Level = 1
+	c.Inventory = make([]string, 0, c.MaxInventory)
+	c.Attacks = append([]string(nil), template.Attacks...)
+
+	return &c, nil
+}
+
 func ReadInt() int {
 	input, _ := Reader.ReadString('\n')
 	input = strings.TrimSpace(input)
@@ -70,6 +89,20 @@ func ReadInt() int {
 		return -1
 	}
 	return n
+}
+
+func ReadIntPrompt(prompt string) int {
+	for {
+		fmt.Print(prompt)
+		input, _ := Reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		n, err := strconv.Atoi(input)
+		if err != nil {
+			fmt.Println("Entrée invalide, merci de saisir un nombre.")
+			continue
+		}
+		return n
+	}
 }
 
 func CanAddItem(c *Classe) bool {
@@ -107,7 +140,8 @@ func CountItem(c *Classe, item string) int {
 }
 
 func DisplayInfo(c *Classe) {
-	fmt.Println(TitleBox("FICHE DE SURVIVANT"))
+	titre := fmt.Sprintf("FICHE DE %s", strings.ToUpper(c.Nom))
+	fmt.Println(TitleBox(titre))
 	fmt.Printf("%sNom       :%s %s%s%s\n", Bold, Reset, BrightWhite, c.Nom, Reset)
 	fmt.Printf("%sClasse    :%s %s%s%s\n", Bold, Reset, BrightCyan, c.Type, Reset)
 	fmt.Printf("%sNiveau    :%s %s%d%s\n", Bold, Reset, BrightYellow, c.Level, Reset)
