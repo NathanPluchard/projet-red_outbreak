@@ -38,11 +38,11 @@ func characterCreation() classes.Classe {
 		fmt.Print("Nom invalide, réessayez : ")
 	}
 
-	fmt.Println("Choisissez votre classe :")
-	fmt.Println("1. Survivant")
-	fmt.Println("2. Punk")
-	fmt.Println("3. Médecin de fortune")
-	fmt.Println("4. Sauveur")
+	fmt.Println(classes.BrightCyan + "Choisissez votre classe :" + classes.Reset)
+	fmt.Printf("%s1.%s Survivant\n", classes.BrightCyan, classes.Reset)
+	fmt.Printf("%s2.%s Punk\n", classes.BrightCyan, classes.Reset)
+	fmt.Printf("%s3.%s Médecin de fortune\n", classes.BrightCyan, classes.Reset)
+	fmt.Printf("%s4.%s Sauveur\n", classes.BrightCyan, classes.Reset)
 
 	var nomClasse string
 	for {
@@ -56,13 +56,14 @@ func characterCreation() classes.Classe {
 		case 4:
 			nomClasse = "Sauveur"
 		default:
-			fmt.Println("Choix invalide, réessayez.")
+			fmt.Println(classes.BrightRed + "Choix invalide, réessayez." + classes.Reset)
 			continue
 		}
 		break
 	}
 
 	perso := classes.Classes[nomClasse]
+	perso.Type = nomClasse
 	perso.Nom = nom
 	perso.PV = perso.PVBase
 	perso.Level = 1
@@ -78,15 +79,16 @@ func showArtists() {
 
 func mainMenu(c *classes.Classe) {
 	for {
-		fmt.Println("\n===== MENU =====")
-		fmt.Println("1. Afficher les informations du personnage")
-		fmt.Println("2. Accéder à l'inventaire")
-		fmt.Println("3. Marchand (Le Troqueur)")
-		fmt.Println("4. Forgeron (Le Bricoleur)")
-		fmt.Println("5. Entrainement")
-		fmt.Println("6. Qui sont-ils")
-		fmt.Println("0. Quitter")
-		fmt.Print("Choix : ")
+		fmt.Println()
+		fmt.Println(classes.TitleBox("MENU PRINCIPAL"))
+		fmt.Printf("%s1.%s Afficher les informations du personnage\n", classes.BrightCyan, classes.Reset)
+		fmt.Printf("%s2.%s Accéder à l'inventaire\n", classes.BrightCyan, classes.Reset)
+		fmt.Printf("%s3.%s Marchand (Le Troqueur)\n", classes.BrightCyan, classes.Reset)
+		fmt.Printf("%s4.%s Forgeron (Le Bricoleur)\n", classes.BrightCyan, classes.Reset)
+		fmt.Printf("%s5.%s %sEntrainement%s\n", classes.BrightCyan, classes.Reset, classes.BrightRed, classes.Reset)
+		fmt.Printf("%s6.%s Qui sont-ils\n", classes.BrightCyan, classes.Reset)
+		fmt.Printf("%s0.%s Quitter\n", classes.Dim, classes.Reset)
+		fmt.Print(classes.Bold + "Choix : " + classes.Reset)
 
 		switch classes.ReadInt() {
 		case 1:
@@ -102,17 +104,24 @@ func mainMenu(c *classes.Classe) {
 		case 6:
 			showArtists()
 		case 0:
-			fmt.Println("À bientôt, survivant.")
+			fmt.Println(classes.BrightYellow + "A bientôt l'ami j'espère qu'on se reverra....." + classes.Reset)
 			return
 		default:
-			fmt.Println("Choix invalide.")
+			fmt.Println(classes.BrightRed + "Choix invalide." + classes.Reset)
 		}
 	}
 }
 
 func main() {
-	fmt.Println("====Bienvenue cher survivant veillez choisir un nom====")
-	fmt.Println("=====DEPART=======")
+	fmt.Println(classes.Bold + classes.BrightRed + `
+   ____  _   _ _____ ____  ____  _____    _    _  __
+  / __ \| | | |_   _|  _ \|  _ \| ____|  / \  | |/ /
+ | |  | | | | | | | | |_) | |_) |  _|   / _ \ | ' / 
+ | |__| | |_| | | | |  _ <|  _ <| |___ / ___ \| . \ 
+  \____/ \___/  |_| |_| \_\_| \_\_____/_/   \_\_|\_\
+` + classes.Reset)
+	fmt.Println(classes.Dim + "====Bienvenue cher survivant, veillez choisir un nom====" + classes.Reset)
+	fmt.Println(classes.Dim + "=====DEPART=======" + classes.Reset)
 	c1 := characterCreation()
 	mainMenu(&c1)
 }

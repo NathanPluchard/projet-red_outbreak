@@ -36,28 +36,29 @@ type Classe struct {
 	Equip             Equipement
 	Initiative        int
 	Specialite        string
+	Type              string
 }
 
 var Classes = map[string]Classe{
 	"Survivant": {
-		Nom: "Survivant", Description: "Généraliste équilibré, doué pour durer sur la longueur.",
+		Type: "Survivant", Nom: "Survivant", Description: "Généraliste équilibré, doué pour durer sur la longueur.",
 		PVBase: 200, Gold: 15, Exp: 0, MaxExp: 100, AttaqueBase: 8, DefenseBase: 8,
-		Inventory: []string{}, MaxInventory: 10, Mana: 20, ManaMax: 20, Specialite: "Résistance équilibrée",
+		Inventory: []string{}, MaxInventory: 10, Mana: 30, ManaMax: 60, Specialite: "Résistance équilibrée",
 	},
 	"Punk": {
-		Nom: "Punk", Description: "Combattant agressif et instable, frappe fort mais encaisse mal.",
+		Type: "Punk", Nom: "Punk", Description: "Combattant agressif et instable, frappe fort mais encaisse mal.",
 		PVBase: 150, Gold: 40, Exp: 0, MaxExp: 300, AttaqueBase: 13, DefenseBase: 4,
-		Inventory: []string{}, MaxInventory: 10, Mana: 20, ManaMax: 20, Specialite: "Bonus de dégâts critiques",
+		Inventory: []string{}, MaxInventory: 10, Mana: 80, ManaMax: 160, Specialite: "Bonus de dégâts critiques",
 	},
 	"Médecin de fortune": {
-		Nom: "Médecin de fortune", Description: "Support de l'équipe, moins offensif mais indispensable en soin.",
+		Type: "Médecin de fortune", Nom: "Médecin de fortune", Description: "Support de l'équipe, moins offensif mais indispensable en soin.",
 		PVBase: 100, Gold: 20, Exp: 0, MaxExp: 50, AttaqueBase: 6, DefenseBase: 6,
-		Inventory: []string{}, MaxInventory: 10, Mana: 20, ManaMax: 20, Specialite: "Efficacité de soin augmentée",
+		Inventory: []string{}, MaxInventory: 10, Mana: 10, ManaMax: 20, Specialite: "Efficacité de soin augmentée",
 	},
 	"Sauveur": {
-		Nom: "Sauveur", Description: "Protecteur robuste, pensé pour encaisser et défendre le groupe.",
+		Type: "Sauveur", Nom: "Sauveur", Description: "Protecteur robuste, pensé pour encaisser et défendre le groupe.",
 		PVBase: 80, Gold: 30, Exp: 0, MaxExp: 200, AttaqueBase: 9, DefenseBase: 9,
-		Inventory: []string{}, MaxInventory: 10, Mana: 20, ManaMax: 20, Specialite: "Réduction de dégâts subis",
+		Inventory: []string{}, MaxInventory: 10, Mana: 50, ManaMax: 100, Specialite: "Réduction de dégâts subis",
 	},
 }
 
@@ -106,23 +107,24 @@ func CountItem(c *Classe, item string) int {
 }
 
 func DisplayInfo(c *Classe) {
-	fmt.Println("---------------------------------")
-	fmt.Printf("Nom       : %s\n", c.Nom)
-	fmt.Printf("Niveau    : %d\n", c.Level)
-	fmt.Printf("PV        : %d / %d\n", c.PV, c.PVBase)
-	fmt.Printf("Mana      : %d / %d\n", c.Mana, c.ManaMax)
-	fmt.Printf("Or        : %d\n", c.Gold)
-	fmt.Printf("Exp       : %d / %d\n", c.Exp, c.MaxExp)
-	fmt.Printf("Attaques  : %s\n", strings.Join(c.Attacks, ", "))
-	fmt.Printf("Casque    : %s\n", displayOrEmpty(c.Equip.Head))
-	fmt.Printf("Torse     : %s\n", displayOrEmpty(c.Equip.Torso))
-	fmt.Printf("Pieds     : %s\n", displayOrEmpty(c.Equip.Feet))
-	fmt.Println("---------------------------------")
+	fmt.Println(TitleBox("FICHE DE SURVIVANT"))
+	fmt.Printf("%sNom       :%s %s%s%s\n", Bold, Reset, BrightWhite, c.Nom, Reset)
+	fmt.Printf("%sClasse    :%s %s%s%s\n", Bold, Reset, BrightCyan, c.Type, Reset)
+	fmt.Printf("%sNiveau    :%s %s%d%s\n", Bold, Reset, BrightYellow, c.Level, Reset)
+	fmt.Printf("%sPV        :%s %s %d/%d\n", Bold, Reset, HPBar(c.PV, c.PVBase), c.PV, c.PVBase)
+	fmt.Printf("%sMana      :%s %s %d/%d\n", Bold, Reset, ManaBar(c.Mana, c.ManaMax), c.Mana, c.ManaMax)
+	fmt.Printf("%sExp       :%s %s %d/%d\n", Bold, Reset, ExpBar(c.Exp, c.MaxExp), c.Exp, c.MaxExp)
+	fmt.Printf("%sOr        :%s %s%d 💰%s\n", Bold, Reset, BrightYellow, c.Gold, Reset)
+	fmt.Printf("%sAttaques  :%s %s%s%s\n", Bold, Reset, Green, strings.Join(c.Attacks, ", "), Reset)
+	fmt.Printf("%sCasque    :%s %s\n", Bold, Reset, displayOrEmpty(c.Equip.Head))
+	fmt.Printf("%sTorse     :%s %s\n", Bold, Reset, displayOrEmpty(c.Equip.Torso))
+	fmt.Printf("%sPieds     :%s %s\n", Bold, Reset, displayOrEmpty(c.Equip.Feet))
+	fmt.Println(Separator())
 }
 
 func displayOrEmpty(s string) string {
 	if s == "" {
-		return "Aucun"
+		return Dim + "Aucun" + Reset
 	}
-	return s
+	return BrightWhite + s + Reset
 }
