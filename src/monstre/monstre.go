@@ -102,8 +102,6 @@ func InitRoiInfectes() Monster {
 	}
 }
 
-// MonsterEntry associe un générateur de monstre au niveau minimum du
-// joueur à partir duquel ce monstre peut apparaître en entrainement.
 type MonsterEntry struct {
 	Init        func() Monster
 	UnlockLevel int
@@ -119,8 +117,6 @@ var AllMonsters = []MonsterEntry{
 	{InitRoiInfectes, 13},
 }
 
-// SelectMonster tire au sort un monstre parmi ceux déjà "débloqués"
-// pour le niveau du joueur (tous les monstres dont UnlockLevel <= level).
 func SelectMonster(level int) Monster {
 	var pool []func() Monster
 	for _, entry := range AllMonsters {
@@ -223,7 +219,6 @@ func CombatSpellMenu(c *classes.Classe, m *Monster) {
 	}
 	c.Mana -= info.ManaCost
 
-	// Les dégâts de base de l'attaque + l'attaque du personnage
 	damage := info.Damage + c.AttaqueBase
 
 	m.CurrentHP -= damage
@@ -240,7 +235,6 @@ func GoblinPattern(m *Monster, c *classes.Classe, turn int) {
 		baseDamage = m.Attack * 2
 	}
 
-	// La défense réduit les dégâts subis, sans jamais descendre sous 1
 	reduction := c.DefenseBase / 2
 	damage := baseDamage - reduction
 	if damage < 1 {
