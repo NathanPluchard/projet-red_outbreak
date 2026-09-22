@@ -6,141 +6,411 @@ import (
 	"outbreak/classes"
 )
 
-type ArmorTier struct {
-	Level     int
-	TierName  string
-	Head      string
-	Torso     string
-	Feet      string
-	Materials map[string]int
-	Cost      int
+// ============================================================
+// AMÉLIORATIONS DU FORGERON
+// ============================================================
+
+type Upgrade struct {
+	Name        string
+	Description string
+	Cost        int
+	Level       int
+	Damage      int
+	Defense     int
 }
 
-var ArmorTiers = []ArmorTier{
-	{1, "Civil", "Casquette renforcée", "Veste de travail", "Chaussures de randonnée", map[string]int{"Tissu": 4, "Bois": 2, "Plume": 1}, 10},
-	{2, "Survivant", "Casque de chantier renforcé", "Veste tactique légère", "Bottes de randonnée renforcées", map[string]int{"Tissu": 5, "Bois": 3, "Acier": 1, "Plume": 2}, 20},
-	{3, "Soldat", "Casque tactique", "Gilet tactique renforcé", "Bottes tactiques", map[string]int{"Tissu": 4, "Bois": 2, "Acier": 4, "Plume": 2}, 35},
-	{4, "Tank", "Casque balistique", "Armure à plaques", "Bottes blindées", map[string]int{"Tissu": 3, "Bois": 1, "Acier": 8, "Plume": 3}, 55},
-	{5, "Légendaire", "Casque intégral composite", "Armure anti-zombies", "Bottes renforcées composites", map[string]int{"Tissu": 2, "Acier": 12, "Plume": 4}, 90},
+// Les différents niveaux d'amélioration.
+var Upgrades = []Upgrade{
+	{
+		Name:        "Arme renforcée",
+		Description: "Augmente les dégâts de base.",
+		Cost:        75,
+		Level:       2,
+		Damage:      3,
+		Defense:     0,
+	},
+	{
+		Name:        "Armure renforcée",
+		Description: "Améliore la défense.",
+		Cost:        100,
+		Level:       3,
+		Damage:      0,
+		Defense:      3,
+	},
+	{
+		Name:        "Arme militaire",
+		Description: "Une amélioration importante des dégâts.",
+		Cost:        175,
+		Level:       5,
+		Damage:      7,
+		Defense:     0,
+	},
+	{
+		Name:        "Armure tactique",
+		Description: "Une protection supérieure.",
+		Cost:        225,
+		Level:       7,
+		Damage:      0,
+		Defense:      7,
+	},
+	{
+		Name:        "Équipement d'élite",
+		Description: "Améliore fortement l'équipement.",
+		Cost:        400,
+		Level:       10,
+		Damage:      12,
+		Defense:      12,
+	},
 }
+
+// ============================================================
+// FORGERON
+// ============================================================
 
 func BlacksmithTiers(c *classes.Classe) {
+
 	for {
-		fmt.Println("---- Le Bricoleur : Atelier pour tout type de protection ----")
-		fmt.Println("Votre or :", c.Gold)
-		for _, t := range ArmorTiers {
-			fmt.Printf("%d. Palier %s (%s / %s / %s) - %d pièces d'or\n", t.Level, t.TierName, t.Head, t.Torso, t.Feet, t.Cost)
-		}
-		fmt.Println("0. Retour")
-		fmt.Print("Choix : ")
 
-		choix := classes.ReadInt()
-		if choix == 0 {
+		classes.ClearScreen()
+
+		fmt.Println(
+			classes.TitleBox(
+				"🔨 LE BRICOLEUR",
+			),
+		)
+
+		fmt.Printf(
+			"\n%sNiveau : %d%s\n",
+			classes.BrightCyan,
+			c.Level,
+			classes.Reset,
+		)
+
+		fmt.Printf(
+			"%sOr disponible : %d 💰%s\n\n",
+			classes.BrightYellow,
+			c.Gold,
+			classes.Reset,
+		)
+
+		fmt.Printf(
+			"%sDégâts :%s %d\n",
+			classes.Bold,
+			classes.Reset,
+			c.AttaqueBase,
+		)
+
+		fmt.Printf(
+			"%sDéfense :%s %d\n\n",
+			classes.Bold,
+			classes.Reset,
+			c.DefenseBase,
+		)
+
+		fmt.Println(
+			classes.Panel(
+				"ATELIER",
+				"[1] Voir les améliorations",
+				"[2] Améliorer l'équipement",
+				"[0] Quitter",
+			),
+		)
+
+		fmt.Print(
+			"\n" +
+				classes.BrightCyan +
+				"Action > " +
+				classes.Reset,
+		)
+
+		choice := classes.ReadInt()
+
+		switch choice {
+
+		case 1:
+			displayUpgrades(c)
+
+		case 2:
+			upgradeEquipment(c)
+
+		case 0:
 			return
-		}
-		if choix < 1 || choix > len(ArmorTiers) {
-			fmt.Println("Choix invalide")
-			continue
-		}
-		tier := ArmorTiers[choix-1]
 
-		if c.Gold < tier.Cost {
-			fmt.Println("Vous n'avez pas assez d'argent pour ce palier")
-			continue
-		}
-		missing := false
-		for mat, qty := range tier.Materials {
-			if classes.CountItem(c, mat) < qty {
-				fmt.Printf("Il vous manque : %s (x%d requis)\n", mat, qty)
-				missing = true
-			}
-		}
-		if missing {
-			continue
-		}
-		if len(c.Inventory)+3 > c.MaxInventory {
-			fmt.Println("Pas assez de place pour ces 3 équipements")
-			continue
-		}
+		default:
 
-		for mat, qty := range tier.Materials {
-			for i := 0; i < qty; i++ {
-				classes.RemoveInventory(c, mat)
-			}
-		}
-		c.Gold -= tier.Cost
-		classes.AddInventory(c, tier.Head)
-		classes.AddInventory(c, tier.Torso)
-		classes.AddInventory(c, tier.Feet)
+			fmt.Println(
+				classes.BrightRed +
+					"✖ Choix invalide." +
+					classes.Reset,
+			)
 
-		fmt.Println("Set", tier.TierName, "fabriqué avec succès !!")
+			classes.Pause()
+		}
 	}
 }
 
-func FindTierSlot(item string) (tier *ArmorTier, slot string) {
-	for i := range ArmorTiers {
-		t := &ArmorTiers[i]
-		if t.Head == item {
-			return t, "head"
+// ============================================================
+// AFFICHAGE
+// ============================================================
+
+func displayUpgrades(c *classes.Classe) {
+
+	classes.ClearScreen()
+
+	fmt.Println(
+		classes.TitleBox(
+			"🔨 AMÉLIORATIONS DISPONIBLES",
+		),
+	)
+
+	fmt.Println()
+
+	for i, upgrade := range Upgrades {
+
+		fmt.Printf(
+			"%s[%d] %s%s\n",
+			classes.BrightCyan,
+			i+1,
+			upgrade.Name,
+			classes.Reset,
+		)
+
+		fmt.Printf(
+			"    %s%s%s\n",
+			classes.Dim,
+			upgrade.Description,
+			classes.Reset,
+		)
+
+		fmt.Printf(
+			"    Niveau requis : %d\n",
+			upgrade.Level,
+		)
+
+		fmt.Printf(
+			"    Prix : %s%d 💰%s\n",
+			classes.BrightYellow,
+			upgrade.Cost,
+			classes.Reset,
+		)
+
+		if upgrade.Damage > 0 {
+			fmt.Printf(
+				"    Dégâts : %s+%d%s\n",
+				classes.BrightGreen,
+				upgrade.Damage,
+				classes.Reset,
+			)
 		}
-		if t.Torso == item {
-			return t, "torso"
+
+		if upgrade.Defense > 0 {
+			fmt.Printf(
+				"    Défense : %s+%d%s\n",
+				classes.BrightGreen,
+				upgrade.Defense,
+				classes.Reset,
+			)
 		}
-		if t.Feet == item {
-			return t, "feet"
-		}
+
+		fmt.Println()
 	}
-	return nil, ""
+
+	classes.Pause()
 }
 
-func HpBonus(slot string, level int) int {
-	switch slot {
-	case "head":
-		return level * 5
-	case "torso":
-		return level * 10
-	case "feet":
-		return level * 7
-	}
-	return 0
-}
+// ============================================================
+// ACHAT D'UNE AMÉLIORATION
+// ============================================================
 
-func EquipItem(c *classes.Classe, item string) {
-	tier, slot := FindTierSlot(item)
-	if tier == nil {
-		fmt.Println("Cet objet ne peut pas être équipé.")
+func upgradeEquipment(c *classes.Classe) {
+
+	classes.ClearScreen()
+
+	fmt.Println(
+		classes.TitleBox(
+			"🔨 ATELIER DU BRICOLEUR",
+		),
+	)
+
+	fmt.Println()
+
+	for i, upgrade := range Upgrades {
+
+		available := ""
+
+		if c.Level >= upgrade.Level {
+			available =
+				classes.BrightGreen +
+					"DISPONIBLE" +
+					classes.Reset
+		} else {
+			available =
+				classes.BrightRed +
+					"VERROUILLÉ" +
+					classes.Reset
+		}
+
+		fmt.Printf(
+			"%s[%d]%s %-25s %s%d 💰%s  %s\n",
+			classes.BrightCyan,
+			i+1,
+			classes.Reset,
+			upgrade.Name,
+			classes.BrightYellow,
+			upgrade.Cost,
+			classes.Reset,
+			available,
+		)
+	}
+
+	fmt.Println(
+		"\n" +
+			classes.Dim +
+			"[0] Annuler" +
+			classes.Reset,
+	)
+
+	fmt.Print(
+		"\nAmélioration > ",
+	)
+
+	choice := classes.ReadInt()
+
+	if choice == 0 {
 		return
 	}
-	classes.RemoveInventory(c, item)
-	bonus := HpBonus(slot, tier.Level)
 
-	switch slot {
-	case "head":
-		if c.Equip.Head != "" {
-			if oldTier, _ := FindTierSlot(c.Equip.Head); oldTier != nil {
-				c.PVBase -= HpBonus("head", oldTier.Level)
-			}
-			classes.AddInventory(c, c.Equip.Head)
-		}
-		c.Equip.Head = item
-	case "torso":
-		if c.Equip.Torso != "" {
-			if oldTier, _ := FindTierSlot(c.Equip.Torso); oldTier != nil {
-				c.PVBase -= HpBonus("torso", oldTier.Level)
-			}
-			classes.AddInventory(c, c.Equip.Torso)
-		}
-		c.Equip.Torso = item
-	case "feet":
-		if c.Equip.Feet != "" {
-			if oldTier, _ := FindTierSlot(c.Equip.Feet); oldTier != nil {
-				c.PVBase -= HpBonus("feet", oldTier.Level)
-			}
-			classes.AddInventory(c, c.Equip.Feet)
-		}
-		c.Equip.Feet = item
+	if choice < 1 || choice > len(Upgrades) {
+
+		fmt.Println(
+			classes.BrightRed +
+				"✖ Amélioration invalide." +
+				classes.Reset,
+		)
+
+		classes.Pause()
+
+		return
 	}
 
-	c.PVBase += bonus
-	fmt.Println("Vous équipez :", item, "( +", bonus, "PV max )")
+	upgrade := Upgrades[choice-1]
+
+	// --------------------------------------------------------
+	// NIVEAU
+	// --------------------------------------------------------
+
+	if c.Level < upgrade.Level {
+
+		fmt.Printf(
+			"\n%s✖ Niveau insuffisant.%s\n",
+			classes.BrightRed,
+			classes.Reset,
+		)
+
+		fmt.Printf(
+			"Niveau requis : %d\n",
+			upgrade.Level,
+		)
+
+		classes.Pause()
+
+		return
+	}
+
+	// --------------------------------------------------------
+	// ARGENT
+	// --------------------------------------------------------
+
+	if c.Gold < upgrade.Cost {
+
+		fmt.Printf(
+			"\n%s✖ Vous n'avez pas assez d'or.%s\n",
+			classes.BrightRed,
+			classes.Reset,
+		)
+
+		fmt.Printf(
+			"Prix : %d 💰\n",
+			upgrade.Cost,
+		)
+
+		classes.Pause()
+
+		return
+	}
+
+	// --------------------------------------------------------
+	// PAIEMENT
+	// --------------------------------------------------------
+
+	c.Gold -= upgrade.Cost
+
+	// --------------------------------------------------------
+	// AMÉLIORATIONS
+	// --------------------------------------------------------
+
+	if upgrade.Damage > 0 {
+		c.AttaqueBase += upgrade.Damage
+	}
+
+	if upgrade.Defense > 0 {
+		c.DefenseBase += upgrade.Defense
+	}
+
+	// --------------------------------------------------------
+	// CONFIRMATION
+	// --------------------------------------------------------
+
+	classes.ClearScreen()
+
+	fmt.Println(
+		classes.TitleBox(
+			"✔ ÉQUIPEMENT AMÉLIORÉ",
+		),
+	)
+
+	fmt.Println()
+
+	fmt.Printf(
+		"%sAmélioration :%s %s\n",
+		classes.Bold,
+		classes.Reset,
+		upgrade.Name,
+	)
+
+	if upgrade.Damage > 0 {
+
+		fmt.Printf(
+			"%sDégâts : +%d%s\n",
+			classes.BrightGreen,
+			upgrade.Damage,
+			classes.Reset,
+		)
+	}
+
+	if upgrade.Defense > 0 {
+
+		fmt.Printf(
+			"%sDéfense : +%d%s\n",
+			classes.BrightGreen,
+			upgrade.Defense,
+			classes.Reset,
+		)
+	}
+
+	fmt.Printf(
+		"\n%s-%d 💰%s\n",
+		classes.BrightRed,
+		upgrade.Cost,
+		classes.Reset,
+	)
+
+	fmt.Printf(
+		"Or restant : %s%d 💰%s\n",
+		classes.BrightYellow,
+		c.Gold,
+		classes.Reset,
+	)
+
+	classes.Pause()
 }

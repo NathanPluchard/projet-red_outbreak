@@ -5,9 +5,9 @@ import (
 "math/rand"
 "time"
 
-```
+
 "outbreak/classes"
-```
+
 
 )
 
@@ -123,7 +123,7 @@ var AllMonsters = []MonsterEntry{
 func SelectMonster(level int) Monster {
 var pool []func() Monster
 
-```
+
 for _, entry := range AllMonsters {
 	if entry.UnlockLevel <= level {
 		pool = append(pool, entry.Init)
@@ -135,7 +135,7 @@ if len(pool) == 0 {
 }
 
 return pool[rand.Intn(len(pool))]()
-```
+
 
 }
 
@@ -174,9 +174,9 @@ return &AllAttacks[i]
 }
 }
 
-```
+
 return nil
-```
+
 
 }
 
@@ -187,16 +187,15 @@ return true
 }
 }
 
-```
+
 return false
-```
 
 }
 
 func GainExp(c *classes.Classe, exp int) {
 c.Exp += exp
 
-```
+
 fmt.Printf(
 	"%s+%d XP%s\n",
 	classes.BrightMagenta,
@@ -237,21 +236,21 @@ for c.Exp >= c.MaxExp {
 		}
 	}
 }
-```
+
 
 }
 
 func GainGold(c *classes.Classe, gold int) {
 c.Gold += gold
 
-```
+
 fmt.Printf(
 	"%s+%d 💰%s\n",
 	classes.BrightYellow,
 	gold,
 	classes.Reset,
 )
-```
+
 
 }
 
@@ -259,7 +258,6 @@ func IsDead(c *classes.Classe) {
 if c.PV <= 0 {
 c.PV = c.PVBase / 2
 
-```
 	fmt.Printf(
 		"%s⚠ %s tombe mais se relève avec %d PV.%s\n",
 		classes.BrightRed,
@@ -268,16 +266,15 @@ c.PV = c.PVBase / 2
 		classes.Reset,
 	)
 }
-```
+
 
 }
 
-// Choisit automatiquement l'attaque disponible qui inflige
-// le plus de dégâts.
+
 func bestAttack(c *classes.Classe) *AttackInfo {
 var best *AttackInfo
 
-```
+
 for _, name := range c.Attacks {
 	attack := GetAttackInfo(name)
 
@@ -299,14 +296,14 @@ if best == nil {
 }
 
 return best
-```
+
 
 }
 
 // Le joueur attaque automatiquement.
 func autoPlayerAttack(c *classes.Classe, m *Monster) {
 
-```
+
 attack := bestAttack(c)
 
 if attack.ManaCost <= c.Mana {
@@ -315,7 +312,7 @@ if attack.ManaCost <= c.Mana {
 
 damage := attack.Damage + c.AttaqueBase
 
-// Bonus spécial du Punk
+
 if c.Type == "Punk" && rand.Intn(4) == 0 {
 
 	damage = damage * 3 / 2
@@ -343,7 +340,7 @@ fmt.Printf(
 	damage,
 	classes.Reset,
 )
-```
+
 
 }
 
@@ -354,18 +351,18 @@ c *classes.Classe,
 turn int,
 ) {
 
-```
+
 damage := m.Attack
 
-// Toutes les 3 manches, le zombie frappe plus fort.
+
 if turn%3 == 0 {
 	damage *= 2
 }
 
 damage -= c.DefenseBase / 2
 
-// Bonus du Sauveur.
-if c.Type == "Sauveur" {
+
+ if c.Type == "Sauveur" {
 	damage = damage * 80 / 100
 }
 
@@ -388,7 +385,7 @@ fmt.Printf(
 	damage,
 	classes.Reset,
 )
-```
+
 
 }
 
@@ -399,7 +396,7 @@ monsters []Monster,
 turn int,
 ) {
 
-```
+
 classes.ClearScreen()
 
 fmt.Println(
@@ -469,14 +466,14 @@ for i := range monsters {
 }
 
 fmt.Println()
-```
+
 
 }
 
 
 func SimulationFight(c *classes.Classe) {
 
-```
+
 // Le nombre de zombies augmente avec le niveau.
 numberOfMonsters := 2 + c.Level/4
 
@@ -682,11 +679,11 @@ fmt.Printf(
 )
 
 classes.Pause()
-```
+
 
 }
 
 func TrainingFight(c *classes.Classe) {
 SimulationFight(c)
 }
-'''
+
