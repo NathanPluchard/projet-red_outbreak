@@ -39,6 +39,8 @@ type Classe struct {
 	Attacks           []string
 	Equip             Equipement
 	Initiative        int
+	CompletedZones    map[string]int
+	BossesDefeated    map[string]bool
 }
 
 var Classes = map[string]Classe{
@@ -77,6 +79,8 @@ func NewClasse(nom string) (*Classe, error) {
 	c.Level = 1
 	c.Inventory = make([]string, 0, c.MaxInventory)
 	c.Attacks = append([]string(nil), template.Attacks...)
+	c.CompletedZones = make(map[string]int)
+	c.BossesDefeated = make(map[string]bool)
 
 	return &c, nil
 }

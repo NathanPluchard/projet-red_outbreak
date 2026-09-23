@@ -743,6 +743,71 @@ func SimulationFight(c *classes.Classe) {
 
 }
 
+// BossFight lance un combat ciblé contre le boss demandé.
+// Il est utilisé par les expéditions pour garantir que le bon boss apparaît.
+func BossFight(c *classes.Classe, bossName string) bool {
+	constructors := map[string]func() Monster{
+		"Nécromancien infecté": InitNecromancien,
+		"Brute mutante":        InitBrute,
+		"Abomination":          InitAbomination,
+		"Roi des infectés":     InitRoiInfectes,
+	}
+
+	initBoss, ok := constructors[bossName]
+	if !ok {
+		return false
+	}
+
+	boss := initBoss()
+	turn := 1
+
+	for boss.CurrentHP > 0 && c.PV > 0 {
+		classes.ClearScreen()
+		fmt.Println(classes.TitleBox("☣ BOSS — " + boss.Name + " ☣"))
+		fmt.Printf("\n%s%s%s\n", classes.Bold, c.Nom, classes.Reset)
+		fmt.Printf("PV    %s %d/%d\n", classes.HPBar(c.PV, c.PVBase), c.PV, c.PVBase)
+		fmt.Printf("Mana  %s %d/%d\n\n", classes.ManaBar(c.Mana, c.ManaMax), c.Mana, c.ManaMax)
+		fmt.Printf("%s%s%s\n", classes.BrightRed, boss.Name, classes.Reset)
+		fmt.Printf("PV    %s %d/%d\n\n", classes.HPBar(boss.CurrentHP, boss.MaxHP), boss.CurrentHP, boss.MaxHP)
+
+		if c.Type == "Survivant" && c.PV > 0 {
+			regen := c.PVBase / 25
+			if regen < 1 {
+				regen = 1
+			}
+			c.PV += regen
+			if c.PV > c.PVBase {
+				c.PV = c.PVBase
+			}
+			fmt.Printf("%s♥ Régénération : +%d PV%s\n", classes.BrightGreen, regen, classes.Reset)
+		}
+
+		fmt.Println("\n" + classes.BrightCyan + "⚔ VOTRE TOUR" + classes.Reset)
+		autoPlayerAttack(c, &boss)
+		if boss.CurrentHP <= 0 {
+			break
+		}
+
+		fmt.Println("\n" + classes.BrightRed + "☠ TOUR DU BOSS" + classes.Reset)
+		monsterAttack(&boss, c, turn)
+		if c.PV <= 0 {
+			IsDead(c)
+			return false
+		}
+		turn++
+		time.Sleep(450 * time.Millisecond)
+	}
+
+	classes.ClearScreen()
+	fmt.Println(classes.TitleBox("☠ BOSS VAINCU ☠"))
+	fmt.Printf("\n%s%s a été éliminé !%s\n", classes.BrightGreen, boss.Name, classes.Reset)
+	GainExp(c, boss.ExpReward)
+	GainGold(c, boss.GoldReward)
+	c.Mana = c.ManaMax
+	classes.Pause()
+	return true
+}
+
 func TrainingFight(c *classes.Classe) {
 	SimulationFight(c)
 }

@@ -6,6 +6,7 @@ import (
 
 	"outbreak/casino"
 	"outbreak/classes"
+	"outbreak/expedition"
 	"outbreak/forgeron"
 	"outbreak/inventaire"
 	"outbreak/marchand"
@@ -354,18 +355,23 @@ func mainMenu(c *classes.Classe) {
 					classes.Reset+
 					"Le Bricoleur",
 
-				classes.BrightRed+
+				classes.BrightGreen+
 					"[5] "+
+					classes.Reset+
+					"Expéditions / Carte",
+
+				classes.BrightRed+
+					"[6] "+
 					classes.Reset+
 					"Simulation de combat",
 
 				classes.BrightMagenta+
-					"[6] "+
+					"[7] "+
 					classes.Reset+
 					"Casino",
 
 				classes.Dim+
-					"[7] "+
+					"[8] "+
 					classes.Reset+
 					"Qui sont-ils",
 
@@ -410,13 +416,17 @@ func mainMenu(c *classes.Classe) {
 
 		case 5:
 
-			monstre.SimulationFight(c)
+			expedition.Explore(c)
 
 		case 6:
 
-			casino.Casino(c)
+			monstre.SimulationFight(c)
 
 		case 7:
+
+			casino.Casino(c)
+
+		case 8:
 
 			showArtists()
 
