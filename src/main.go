@@ -69,6 +69,10 @@ type Game struct {
 	Cleared        map[string]bool
 	WeaponLevels   map[string]int
 	MissionsDone   int
+	Threat         int
+	Morale         int
+	DayObjective   string
+	ObjectiveDone  bool
 }
 
 var weapons = []Weapon{
@@ -216,6 +220,7 @@ func (g *Game) loop() {
 			fmt.Sprintf("❤️ %d/%d PV   ⭐ Niveau %d   💰 %d", g.Player.PV, g.Player.PVBase, g.Player.Level, g.Player.Gold),
 			fmt.Sprintf("🔩 %d   ⚙️ %d   💊 %d   ⛽ %d   🍖 %d", g.Scrap, g.Components, g.Medicine, g.Fuel, g.Food),
 			fmt.Sprintf("🏚️ Refuge %d   🔨 Atelier %d   ⚡ Générateur %d", g.RefugeLevel, g.WorkshopLevel, g.GeneratorLevel),
+			fmt.Sprintf("☣️ Menace %d%%   🙂 Moral %d%%   ⭐ Réputation %d (%s)", g.Threat, g.Morale, g.Reputation, g.reputationRank()),
 		))
 		fmt.Println(classes.Panel("ACTIONS",
 			"[1] 🗺️ Partir en expédition",
@@ -226,6 +231,7 @@ func (g *Game) loop() {
 			"[6] 👥 Survivants",
 			"[7] 📻 Missions & événements",
 			"[8] 👤 Fiche du personnage",
+			"[9] 📋 Journal de survie",
 			"[0] Quitter",
 		))
 		fmt.Print("\nAction > ")
@@ -248,6 +254,8 @@ func (g *Game) loop() {
 			classes.ClearScreen()
 			classes.DisplayInfo(g.Player)
 			classes.Pause()
+		case 9:
+			g.journal()
 		case 0:
 			fmt.Println("À bientôt, survivant.")
 			return
@@ -301,8 +309,11 @@ func (g *Game) runZone(z Zone) {
 	for w := 1; w <= z.Waves; w++ {
 		enemies := g.wave(z, w)
 		if !g.combat(enemies, w, z.Name, false) {
+			g.Threat += 4
+			g.Morale -= 4
 			return
 		}
+		g.scavenge(z, w)
 		g.recoverBetween()
 		if w < z.Waves && rand.Intn(100) < 45 {
 			if !g.event() {
@@ -322,6 +333,15 @@ func (g *Game) runZone(z Zone) {
 	g.Scrap += z.Waves*5 + boss.Scrap
 	gainXP(g.Player, z.Reward/2)
 	g.reputation(2)
+	g.Threat -= 8
+	if g.Threat < 5 {
+		g.Threat = 5
+	}
+	g.Morale += 8
+	if g.Morale > 100 {
+		g.Morale = 100
+	}
+	g.ObjectiveDone = true
 	g.unlockNext(z)
 	fmt.Println(classes.Panel("🏆 EXPÉDITION RÉUSSIE", fmt.Sprintf("+%d 💰", z.Reward), fmt.Sprintf("+%d 🔩", z.Waves*5+boss.Scrap), "La zone est maintenant nettoyée."))
 	g.advanceDay()
@@ -444,6 +464,9 @@ func (g *Game) heal() {
 	if g.Player.Type == "Médecin de fortune" {
 		h = 70
 	}
+	if g.SurvivorRole("Médecin") {
+		h += 15
+	}
 	g.Player.PV += h
 	if g.Player.PV > g.Player.PVBase {
 		g.Player.PV = g.Player.PVBase
@@ -477,6 +500,9 @@ func (g *Game) enemyTurn(es []Enemy) {
 		if g.Player.Type == "Sauveur" {
 			d = d * 75 / 100
 		}
+		if g.SurvivorRole("Gardien") {
+			d = d * 90 / 100
+		}
 		if d < 1 {
 			d = 1
 		}
@@ -497,7 +523,11 @@ func (g *Game) enemyTurn(es []Enemy) {
 func (g *Game) kill(e Enemy) {
 	g.Player.Kills++
 	g.Player.Gold += e.Gold
-	g.Scrap += e.Scrap
+	scrapGain := e.Scrap
+	if g.SurvivorRole("Éclaireuse") && rand.Intn(100) < 35 {
+		scrapGain += rand.Intn(5) + 1
+	}
+	g.Scrap += scrapGain
 	gainXP(g.Player, e.XP)
 	if e.Boss {
 		g.Player.BossesDefeated++
@@ -511,7 +541,7 @@ func (g *Game) kill(e Enemy) {
 		g.Components++
 		fmt.Println("⚙️ Butin : composant électronique.")
 	}
-	fmt.Printf("☠ %s éliminé : +%d 💰 +%d 🔩\n", e.Name, e.Gold, e.Scrap)
+	fmt.Printf("☠ %s éliminé : +%d 💰 +%d 🔩\n", e.Name, e.Gold, scrapGain)
 }
 
 func gainXP(c *classes.Classe, x int) {
@@ -711,6 +741,11 @@ func (g *Game) workshop() {
 			}
 			classes.Pause()
 		case 3:
+			if !classes.CanAddItem(g.Player) {
+				fmt.Println("Inventaire plein.")
+				classes.Pause()
+				continue
+			}
 			if g.Scrap >= 3 && g.Components >= 2 {
 				g.Scrap -= 3
 				g.Components -= 2
@@ -730,6 +765,9 @@ func (g *Game) workshop() {
 func (g *Game) upgradeWeapon() {
 	costS := 10*g.WeaponLevels[g.Weapon.Name] + 10
 	costC := 2 + g.WeaponLevels[g.Weapon.Name]
+	if g.SurvivorRole("Mécanicien") {
+		costS = costS * 80 / 100
+	}
 	if g.Scrap < costS || g.Components < costC {
 		fmt.Printf("Il faut %d 🔩 et %d ⚙️.\n", costS, costC)
 		classes.Pause()
@@ -775,6 +813,8 @@ func (g *Game) refuge() {
 			g.upgradeRefugePart("refuge")
 		case 5:
 			g.sleep()
+		case 6:
+			g.barricade()
 		case 0:
 			return
 		}
@@ -911,7 +951,7 @@ func (g *Game) missions() {
 	for {
 		classes.ClearScreen()
 		fmt.Println(classes.TitleBox("📻 MISSIONS & RADIO"))
-		fmt.Println(classes.Panel("OBJECTIF DU JOUR", fmt.Sprintf("Jour %d", g.Day), "Les survivants ont besoin de ressources. Chaque expédition peut révéler un nouvel événement."))
+		fmt.Println(classes.Panel("OBJECTIF DU JOUR", fmt.Sprintf("Jour %d", g.Day), g.DayObjective, fmt.Sprintf("État : %s", ternary(g.ObjectiveDone, "✓ TERMINÉ", "EN COURS"))))
 		fmt.Println("[1] Écouter la radio", "\n[2] Faire une mission de ravitaillement", "\n[3] Voir les statistiques", "\n[0] Retour")
 		switch classes.ReadInt() {
 		case 1:
@@ -929,6 +969,10 @@ func (g *Game) radio() {
 	events := []string{"📻 Un survivant parle d'un convoi abandonné.", "📻 Une voix inconnue transmet les coordonnées d'un laboratoire.", "📻 Quelqu'un demande des médicaments.", "📻 Une station annonce une pénurie de carburant."}
 	fmt.Println(events[rand.Intn(len(events))])
 	g.Reputation++
+	g.Morale += 2
+	if g.Morale > 100 {
+		g.Morale = 100
+	}
 	classes.Pause()
 }
 func (g *Game) supplyMission() {
@@ -945,11 +989,16 @@ func (g *Game) supplyMission() {
 	g.Scrap += gain
 	g.Food += rand.Intn(4) + 1
 	g.MissionsDone++
+	g.Morale += 5
+	if g.Morale > 100 {
+		g.Morale = 100
+	}
+	g.ObjectiveDone = true
 	fmt.Printf("Mission réussie : +%d 🔩 et nourriture récupérée.\n", gain)
 	classes.Pause()
 }
 func (g *Game) stats() {
-	fmt.Println(classes.Panel("STATISTIQUES", fmt.Sprintf("☠️ Infectés éliminés : %d", g.Player.Kills), fmt.Sprintf("👑 Boss vaincus : %d", g.Player.BossesDefeated), fmt.Sprintf("🗺️ Zones nettoyées : %d/%d", len(g.Cleared), len(zones)), fmt.Sprintf("👥 Survivants : %d", len(g.Survivors)), fmt.Sprintf("📻 Missions : %d", g.MissionsDone), fmt.Sprintf("⭐ Niveau : %d", g.Player.Level)))
+	fmt.Println(classes.Panel("STATISTIQUES", fmt.Sprintf("☠️ Infectés éliminés : %d", g.Player.Kills), fmt.Sprintf("👑 Boss vaincus : %d", g.Player.BossesDefeated), fmt.Sprintf("🗺️ Zones nettoyées : %d/%d", len(g.Cleared), len(zones)), fmt.Sprintf("👥 Survivants : %d", len(g.Survivors)), fmt.Sprintf("📻 Missions : %d", g.MissionsDone), fmt.Sprintf("⭐ Niveau : %d", g.Player.Level), fmt.Sprintf("☣️ Menace : %d%%", g.Threat), fmt.Sprintf("🙂 Moral : %d%%", g.Morale), fmt.Sprintf("🏆 Réputation : %d (%s)", g.Reputation, g.reputationRank())))
 	classes.Pause()
 }
 
@@ -960,18 +1009,27 @@ func (g *Game) event() bool {
 	case 0:
 		fmt.Println("🚗 Une voiture abandonnée contient du carburant.")
 		g.Fuel += 3
+		g.Morale += 2
 	case 1:
 		fmt.Println("🏚️ Une cache contient des médicaments.")
 		g.Medicine += 2
+		if g.SurvivorRole("Éclaireuse") {
+			g.Medicine++
+		}
 	case 2:
 		fmt.Println("📦 Des débris cachent des composants.")
 		g.Components += 3
 	case 3:
 		fmt.Println("🔩 Un atelier abandonné contient de la ferraille.")
 		g.Scrap += 15
+		if g.SurvivorRole("Éclaireuse") {
+			g.Scrap += 5
+		}
 	case 4:
 		fmt.Println("☣️ Embuscade ! Vous perdez quelques PV.")
 		g.Player.PV -= 15
+		g.Morale -= 5
+		g.Threat += 3
 		if g.Player.PV < 1 {
 			g.Player.PV = 1
 		}
@@ -1004,9 +1062,19 @@ func (g *Game) unlockNext(z Zone) {
 func (g *Game) advanceDay() {
 	g.Day++
 	g.Night = true
+	g.Threat += 2
+	if g.Threat > 100 {
+		g.Threat = 100
+	}
+
 	if g.Food > 0 {
 		g.Food--
+		g.Morale += 2
+	} else {
+		g.Morale -= 12
+		fmt.Println("🍖 Le refuge manque de nourriture. Le moral chute.")
 	}
+
 	if g.Fuel > 0 {
 		g.Fuel--
 	} else {
@@ -1014,8 +1082,30 @@ func (g *Game) advanceDay() {
 		if g.Player.PV < 1 {
 			g.Player.PV = 1
 		}
+		fmt.Println("⚡ Le générateur est à sec. Le refuge manque d'énergie.")
 	}
+
+	if g.SurvivorRole("Médecin") && g.Medicine < 12 {
+		g.Medicine++
+	}
+	if g.SurvivorRole("Gardien") {
+		g.DefenseLevel++
+		if g.DefenseLevel > 5 {
+			g.DefenseLevel = 5
+		}
+	}
+	if g.Morale < 0 {
+		g.Morale = 0
+	}
+	if g.Morale > 100 {
+		g.Morale = 100
+	}
+
+	g.nightRaid()
+	g.DayObjective = randomObjective()
+	g.ObjectiveDone = false
 }
+
 func (g *Game) sleep() {
 	g.advanceDay()
 	g.Night = false
@@ -1024,6 +1114,165 @@ func (g *Game) sleep() {
 	fmt.Printf("🌅 Jour %d. Vous êtes reposé.\n", g.Day)
 	classes.Pause()
 }
+func (g *Game) scavenge(z Zone, wave int) {
+	classes.ClearScreen()
+	fmt.Println(classes.TitleBox("🔎 FOUILLE DES RUINES"))
+	fmt.Println(classes.Panel("APRÈS LE COMBAT", "Les corps et les bâtiments abandonnés cachent peut-être encore quelque chose.", "Plus vous fouillez longtemps, plus le risque augmente."))
+	fmt.Println("[1] Fouiller rapidement", "\n[2] Fouiller à fond", "\n[3] Ne rien risquer")
+	choice := classes.ReadInt()
+	if choice == 3 || choice < 1 || choice > 2 {
+		return
+	}
+
+	chance := 65
+	if choice == 2 {
+		chance = 48
+	}
+	if g.SurvivorRole("Éclaireuse") {
+		chance += 12
+	}
+	if rand.Intn(100) >= chance {
+		loss := 4 + wave
+		g.Player.PV -= loss
+		if g.Player.PV < 1 {
+			g.Player.PV = 1
+		}
+		g.Threat += 2
+		fmt.Printf("☣️ Une embuscade ! Vous perdez %d PV.\n", loss)
+		classes.Pause()
+		return
+	}
+
+	mult := 1
+	if choice == 2 {
+		mult = 2
+	}
+	scrap := (rand.Intn(8) + 5) * mult
+	components := rand.Intn(3)
+	g.Scrap += scrap
+	g.Components += components
+	fmt.Printf("🔩 +%d ferraille\n", scrap)
+	if components > 0 {
+		fmt.Printf("⚙️ +%d composants\n", components)
+	}
+	if rand.Intn(100) < 25+g.reputationBonus()/2 {
+		g.Fuel++
+		fmt.Println("⛽ +1 carburant")
+	}
+	if rand.Intn(100) < 18 {
+		g.Medicine++
+		fmt.Println("💊 +1 médicament")
+	}
+	_ = z
+	classes.Pause()
+}
+
+func (g *Game) nightRaid() {
+	if rand.Intn(100) >= g.Threat/2 {
+		return
+	}
+	classes.ClearScreen()
+	fmt.Println(classes.TitleBox("🌙 ALERTE — ATTAQUE DU REFUGE"))
+	strength := g.DefenseLevel*10 + len(g.Survivors)*4 + g.Morale/10
+	danger := g.Threat/2 + rand.Intn(25)
+	if g.SurvivorRole("Gardien") {
+		strength += 15
+	}
+	if strength >= danger {
+		reward := 5 + g.DefenseLevel*2
+		g.Scrap += reward
+		g.Reputation++
+		g.Morale += 4
+		if g.Morale > 100 {
+			g.Morale = 100
+		}
+		fmt.Println("🛡️ Les défenses tiennent ! Les infectés sont repoussés.")
+		fmt.Printf("🔩 Vous récupérez %d ferrailles sur les assaillants.\n", reward)
+	} else {
+		loss := 5 + rand.Intn(10)
+		if g.Scrap >= loss {
+			g.Scrap -= loss
+		} else {
+			g.Scrap = 0
+		}
+		if g.Food > 0 {
+			g.Food--
+		}
+		g.Morale -= 10
+		if g.Morale < 0 {
+			g.Morale = 0
+		}
+		g.Threat += 5
+		fmt.Println("🚨 Les défenses ont cédé pendant quelques minutes !")
+		fmt.Printf("📦 Le refuge perd %d ferrailles et 1 nourriture.\n", loss)
+	}
+	classes.Pause()
+}
+
+func (g *Game) barricade() {
+	cost := 8 + g.DefenseLevel*4
+	if g.Scrap < cost {
+		fmt.Printf("Il faut %d ferrailles.\n", cost)
+		classes.Pause()
+		return
+	}
+	g.Scrap -= cost
+	g.DefenseLevel++
+	if g.DefenseLevel > 10 {
+		g.DefenseLevel = 10
+	}
+	g.Threat -= 3
+	if g.Threat < 5 {
+		g.Threat = 5
+	}
+	fmt.Printf("🧱 Barricades renforcées. Défense : %d.\n", g.DefenseLevel)
+	classes.Pause()
+}
+
+func (g *Game) reputationRank() string {
+	switch {
+	case g.Reputation >= 20:
+		return "Légende du refuge"
+	case g.Reputation >= 12:
+		return "Héros local"
+	case g.Reputation >= 6:
+		return "Allié fiable"
+	case g.Reputation >= 2:
+		return "Connu"
+	default:
+		return "Inconnu"
+	}
+}
+
+func randomObjective() string {
+	objectives := []string{
+		"Nettoyer une zone infestée.",
+		"Ramener au moins 20 ferrailles au refuge.",
+		"Trouver 3 composants électroniques.",
+		"Accomplir une mission de ravitaillement.",
+		"Faire progresser la réputation du refuge.",
+	}
+	return objectives[rand.Intn(len(objectives))]
+}
+
+func (g *Game) journal() {
+	classes.ClearScreen()
+	fmt.Println(classes.TitleBox("📋 JOURNAL DE SURVIE"))
+	fmt.Println(classes.Panel("SITUATION",
+		fmt.Sprintf("Jour : %d", g.Day),
+		fmt.Sprintf("Menace : %d%%", g.Threat),
+		fmt.Sprintf("Moral : %d%%", g.Morale),
+		fmt.Sprintf("Réputation : %d — %s", g.Reputation, g.reputationRank()),
+		fmt.Sprintf("Objectif : %s", g.DayObjective),
+	))
+	fmt.Println(classes.Panel("COMMUNAUTÉ",
+		fmt.Sprintf("Survivants : %d/4", len(g.Survivors)),
+		fmt.Sprintf("Défense : %d", g.DefenseLevel),
+		fmt.Sprintf("Zones nettoyées : %d/%d", len(g.Cleared), len(zones)),
+	))
+	classes.Pause()
+}
+
 func (g *Game) reputation(n int)     { g.Reputation += n }
 func (g *Game) reputationBonus() int { return g.Reputation * 3 }
 func (g *Game) SurvivorRole(role string) bool {
