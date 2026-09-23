@@ -323,6 +323,24 @@ func roulette(c *classes.Classe) {
 		result,
 	)
 
+	colorLabel := "🟢 Vert"
+
+	if result != 0 {
+		if isRed(result) {
+			colorLabel = "🔴 Rouge"
+		} else {
+			colorLabel = "⚫ Noir"
+		}
+	}
+
+	fmt.Printf(
+		"%sC'est tombé sur le %d, de couleur %s !%s\n\n",
+		classes.Bold,
+		result,
+		colorLabel,
+		classes.Reset,
+	)
+
 	win := false
 	multiplier := 1
 
@@ -554,10 +572,121 @@ func totalWagered(hands []bjHand) int {
 }
 
 type bjHand struct {
-	cards   []card
-	bet     int
-	doubled bool
-	busted  bool
+	cards       []card
+	bet         int
+	doubled     bool
+	busted      bool
+	isSplitAce  bool
+	surrendered bool
+}
+
+// Nombre maximum de mains simultanées (main initiale + 3 splits).
+const maxBlackjackHands = 4
+
+// Demande au joueur s'il souhaite prendre une assurance
+// lorsque le croupier montre un As. Renvoie le montant misé
+// (0 si refusée).
+func askInsurance(c *classes.Classe, bet int) int {
+
+	maxInsurance := bet / 2
+
+	if maxInsurance <= 0 {
+		return 0
+	}
+
+	if maxInsurance > c.Gold {
+		maxInsurance = c.Gold
+	}
+
+	if maxInsurance <= 0 {
+		return 0
+	}
+
+	classes.ClearScreen()
+
+	fmt.Println(
+		classes.TitleBox(
+			"🛡️ ASSURANCE",
+		),
+	)
+
+	fmt.Println()
+
+	fmt.Println(
+		classes.Panel(
+			"LE CROUPIER MONTRE UN AS",
+
+			"Vous pouvez vous assurer contre un Blackjack.",
+
+			fmt.Sprintf(
+				"Mise d'assurance : 0-%d 💰 (paiement 2:1)",
+				maxInsurance,
+			),
+		),
+	)
+
+	fmt.Printf(
+		"\nAssurance (0 pour refuser, max %d) > ",
+		maxInsurance,
+	)
+
+	amount :=
+		classes.ReadInt()
+
+	if amount <= 0 {
+		return 0
+	}
+
+	if amount > maxInsurance {
+		amount = maxInsurance
+	}
+
+	return amount
+
+}
+
+// Crée un sabot composé de plusieurs paquets de 52 cartes,
+// comme sur une vraie table de casino. Utiliser deux paquets
+// (au lieu d'un seul) rend le comptage de cartes moins fiable
+// et évite de manquer de cartes lorsque plusieurs mains sont
+// ouvertes en même temps (splits multiples).
+func newShoe(packs int) []card {
+
+	suits :=
+		[]string{
+			"♠",
+			"♥",
+			"♦",
+			"♣",
+		}
+
+	deck :=
+		make(
+			[]card,
+			0,
+			52*packs,
+		)
+
+	for p := 0; p < packs; p++ {
+
+		for _, suit := range suits {
+
+			for rank := 1; rank <= 13; rank++ {
+
+				deck =
+					append(
+						deck,
+						card{
+							rank: rank,
+							suit: suit,
+						},
+					)
+			}
+		}
+	}
+
+	return deck
+
 }
 
 func blackjack(c *classes.Classe) {
@@ -579,35 +708,8 @@ func blackjack(c *classes.Classe) {
 		return
 	}
 
-	suits :=
-		[]string{
-			"♠",
-			"♥",
-			"♦",
-			"♣",
-		}
-
-	deck :=
-		make(
-			[]card,
-			0,
-			52,
-		)
-
-	for _, suit := range suits {
-
-		for rank := 1; rank <= 13; rank++ {
-
-			deck =
-				append(
-					deck,
-					card{
-						rank: rank,
-						suit: suit,
-					},
-				)
-		}
-	}
+	// Sabot à deux paquets de cartes (104 cartes).
+	deck := newShoe(2)
 
 	player :=
 		[]card{
@@ -623,6 +725,68 @@ func blackjack(c *classes.Classe) {
 
 	playerNatural := score(player) == 21
 	dealerNatural := score(dealer) == 21
+
+	// --------------------------------------------------------
+	// ASSURANCE (si le croupier montre un As)
+	// --------------------------------------------------------
+
+	insurance := 0
+
+	if dealer[0].rank == 1 {
+		insurance = askInsurance(c, bet)
+	}
+
+	if insurance > 0 {
+
+		classes.ClearScreen()
+
+		fmt.Println(
+			classes.TitleBox(
+				"🛡️ RÉSULTAT DE L'ASSURANCE",
+			),
+		)
+
+		fmt.Println()
+
+		if dealerNatural {
+
+			gain := insurance * 2
+
+			c.Gold += gain
+
+			fmt.Printf(
+				"%sLe croupier a Blackjack — l'assurance paie 2:1.%s\n",
+				classes.BrightGreen,
+				classes.Reset,
+			)
+
+			fmt.Printf(
+				"%s+%d 💰%s\n",
+				classes.BrightGreen,
+				gain,
+				classes.Reset,
+			)
+
+		} else {
+
+			c.Gold -= insurance
+
+			fmt.Printf(
+				"%sLe croupier n'a pas Blackjack — assurance perdue.%s\n",
+				classes.BrightRed,
+				classes.Reset,
+			)
+
+			fmt.Printf(
+				"%s-%d 💰%s\n",
+				classes.BrightRed,
+				insurance,
+				classes.Reset,
+			)
+		}
+
+		classes.Pause()
+	}
 
 	// --------------------------------------------------------
 	// BLACKJACK NATUREL (deux premières cartes = 21)
@@ -720,11 +884,11 @@ func blackjack(c *classes.Classe) {
 	// TOUR DU JOUEUR (tirer / rester / doubler / split)
 	// --------------------------------------------------------
 
-	// Capacité fixée à 2 : un seul split est autorisé, donc la
-	// tranche "hands" ne dépassera jamais 2 éléments. Cela évite
-	// qu'un append() ne la réalloue et n'invalide le pointeur "h"
-	// utilisé plus bas.
-	hands := make([]bjHand, 1, 2)
+	// Capacité fixée à maxBlackjackHands : jusqu'à 3 splits sont
+	// autorisés, donc la tranche "hands" ne dépassera jamais ce
+	// nombre d'éléments. Cela évite qu'un append() ne la réalloue
+	// et n'invalide le pointeur "h" utilisé plus bas.
+	hands := make([]bjHand, 1, maxBlackjackHands)
 	hands[0] = bjHand{cards: player, bet: bet}
 
 	i := 0
@@ -796,16 +960,27 @@ func blackjack(c *classes.Classe) {
 				break handLoop
 			}
 
+			// Une main issue d'un split d'As ne reçoit qu'une
+			// seule carte supplémentaire et ne peut plus agir.
+			if h.isSplitAce {
+				break handLoop
+			}
+
 			canDouble :=
 				len(h.cards) == 2 &&
 					!h.doubled &&
 					c.Gold >= totalWagered(hands)+h.bet
 
 			canSplit :=
-				len(hands) == 1 &&
+				len(hands) < maxBlackjackHands &&
 					len(h.cards) == 2 &&
 					h.cards[0].value() == h.cards[1].value() &&
 					c.Gold >= totalWagered(hands)+h.bet
+
+			canSurrender :=
+				len(hands) == 1 &&
+					len(h.cards) == 2 &&
+					!h.doubled
 
 			fmt.Println()
 
@@ -828,6 +1003,14 @@ func blackjack(c *classes.Classe) {
 					append(
 						options,
 						"4  Split",
+					)
+			}
+
+			if canSurrender {
+				options =
+					append(
+						options,
+						"5  Abandonner (récupère la moitié de la mise)",
 					)
 			}
 
@@ -904,14 +1087,20 @@ func blackjack(c *classes.Classe) {
 					continue handLoop
 				}
 
+				isAceSplit :=
+					h.cards[0].rank == 1
+
 				second :=
 					bjHand{
-						cards: []card{h.cards[1]},
-						bet:   h.bet,
+						cards:      []card{h.cards[1]},
+						bet:        h.bet,
+						isSplitAce: isAceSplit,
 					}
 
 				h.cards =
 					[]card{h.cards[0]}
+
+				h.isSplitAce = isAceSplit
 
 				h.cards =
 					append(
@@ -930,6 +1119,25 @@ func blackjack(c *classes.Classe) {
 						hands,
 						second,
 					)
+
+			case 5:
+
+				if !canSurrender {
+
+					fmt.Println(
+						classes.BrightRed +
+							"✖ Choix invalide." +
+							classes.Reset,
+					)
+
+					classes.Pause()
+
+					continue handLoop
+				}
+
+				h.surrendered = true
+
+				break handLoop
 
 			default:
 
@@ -953,7 +1161,7 @@ func blackjack(c *classes.Classe) {
 	anyoneAlive := false
 
 	for _, h := range hands {
-		if !h.busted {
+		if !h.busted && !h.surrendered {
 			anyoneAlive = true
 		}
 	}
@@ -1022,6 +1230,19 @@ func blackjack(c *classes.Classe) {
 		}
 
 		switch {
+
+		case h.surrendered:
+
+			loss := h.bet / 2
+
+			c.Gold -= loss
+
+			fmt.Printf(
+				"  %s⚑ Abandonnée — -%d 💰%s\n",
+				classes.BrightYellow,
+				loss,
+				classes.Reset,
+			)
 
 		case h.busted:
 

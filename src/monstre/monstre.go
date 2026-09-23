@@ -366,6 +366,67 @@ func monsterAttack(
 
 }
 
+type monsterGroup struct {
+	Name       string
+	Count      int
+	Alive      int
+	SumCurrent int
+	SumMax     int
+	ExpReward  int
+	GoldReward int
+}
+
+// Regroupe les monstres identiques (même nom, même récompense)
+// en une seule entrée, et garde des entrées séparées pour les
+// zombies différents (avec leur propre or/XP). Ça évite le
+// double affichage de monstres identiques dans le combat.
+func groupMonsters(monsters []Monster) []monsterGroup {
+
+	var groups []monsterGroup
+
+	index := make(map[string]int)
+
+	for _, m := range monsters {
+
+		key :=
+			fmt.Sprintf(
+				"%s|%d|%d",
+				m.Name,
+				m.ExpReward,
+				m.GoldReward,
+			)
+
+		i, ok := index[key]
+
+		if !ok {
+
+			groups =
+				append(
+					groups,
+					monsterGroup{
+						Name:       m.Name,
+						ExpReward:  m.ExpReward,
+						GoldReward: m.GoldReward,
+					},
+				)
+
+			i = len(groups) - 1
+			index[key] = i
+		}
+
+		groups[i].Count++
+		groups[i].SumMax += m.MaxHP
+
+		if m.CurrentHP > 0 {
+			groups[i].Alive++
+			groups[i].SumCurrent += m.CurrentHP
+		}
+	}
+
+	return groups
+
+}
+
 // Affichage du combat.
 func showCombat(
 	c *classes.Classe,
@@ -415,13 +476,28 @@ func showCombat(
 			classes.Reset,
 	)
 
-	for i := range monsters {
+	groups := groupMonsters(monsters)
 
-		if monsters[i].CurrentHP <= 0 {
+	for _, g := range groups {
+
+		label := g.Name
+
+		if g.Count > 1 {
+
+			label =
+				fmt.Sprintf(
+					"%s x%d",
+					g.Name,
+					g.Count,
+				)
+		}
+
+		if g.Alive == 0 {
+
 			fmt.Printf(
-				"[%d] %s☠ VAINCU%s\n",
-				i+1,
+				"%s☠ %-24s VAINCU%s\n",
 				classes.Dim,
+				label,
 				classes.Reset,
 			)
 
@@ -429,16 +505,32 @@ func showCombat(
 		}
 
 		fmt.Printf(
-			"[%d] %-22s %s %d/%d\n",
-			i+1,
-			monsters[i].Name,
+			"%-26s %s %d/%d   %s💰%d chacun%s  %s⭐%d chacun%s\n",
+			label,
 			classes.HPBar(
-				monsters[i].CurrentHP,
-				monsters[i].MaxHP,
+				g.SumCurrent,
+				g.SumMax,
 			),
-			monsters[i].CurrentHP,
-			monsters[i].MaxHP,
+			g.SumCurrent,
+			g.SumMax,
+			classes.BrightYellow,
+			g.GoldReward,
+			classes.Reset,
+			classes.BrightMagenta,
+			g.ExpReward,
+			classes.Reset,
 		)
+
+		if g.Alive < g.Count {
+
+			fmt.Printf(
+				"  %s(%d/%d en vie)%s\n",
+				classes.Dim,
+				g.Alive,
+				g.Count,
+				classes.Reset,
+			)
+		}
 	}
 
 	fmt.Println()
@@ -530,8 +622,7 @@ func SimulationFight(c *classes.Classe) {
 			}
 
 			if target == -1 ||
-				monsters[i].CurrentHP <
-					monsters[target].CurrentHP {
+				monsters[i].CurrentHP < monsters[target].CurrentHP {
 
 				target = i
 			}

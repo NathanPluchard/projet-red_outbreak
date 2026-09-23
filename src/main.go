@@ -295,54 +295,40 @@ func mainMenu(c *classes.Classe) {
 
 		fmt.Println()
 
-		fmt.Printf(
-			"%s%s%s\n",
-			classes.Bold,
-			c.Nom,
-			classes.Reset,
-		)
+		fmt.Println(
+			classes.Panel(
+				fmt.Sprintf("%s — NIVEAU %d", c.Nom, c.Level),
 
-		fmt.Printf(
-			"Niveau %d\n",
-			c.Level,
-		)
+				fmt.Sprintf(
+					"PV    %s %d/%d",
+					classes.HPBar(c.PV, c.PVBase),
+					c.PV,
+					c.PVBase,
+				),
 
-		fmt.Printf(
-			"PV    %s %d/%d\n",
-			classes.HPBar(
-				c.PV,
-				c.PVBase,
+				fmt.Sprintf(
+					"Mana  %s %d/%d",
+					classes.ManaBar(c.Mana, c.ManaMax),
+					c.Mana,
+					c.ManaMax,
+				),
+
+				fmt.Sprintf(
+					"XP    %s %d/%d",
+					classes.ExpBar(c.Exp, c.MaxExp),
+					c.Exp,
+					c.MaxExp,
+				),
+
+				"",
+
+				classes.BrightYellow+
+					fmt.Sprintf("💰 %d", c.Gold)+
+					classes.Reset,
 			),
-			c.PV,
-			c.PVBase,
 		)
 
-		fmt.Printf(
-			"Mana  %s %d/%d\n",
-			classes.ManaBar(
-				c.Mana,
-				c.ManaMax,
-			),
-			c.Mana,
-			c.ManaMax,
-		)
-
-		fmt.Printf(
-			"XP    %s %d/%d\n",
-			classes.ExpBar(
-				c.Exp,
-				c.MaxExp,
-			),
-			c.Exp,
-			c.MaxExp,
-		)
-
-		fmt.Printf(
-			"\n%s💰 %d%s\n\n",
-			classes.BrightYellow,
-			c.Gold,
-			classes.Reset,
-		)
+		fmt.Println()
 
 		fmt.Println(
 			classes.Panel(

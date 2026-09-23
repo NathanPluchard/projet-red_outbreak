@@ -140,20 +140,65 @@ func CountItem(c *Classe, item string) int {
 }
 
 func DisplayInfo(c *Classe) {
-	titre := fmt.Sprintf("FICHE DE %s", strings.ToUpper(c.Nom))
+
+	titre := "☣ FICHE DE " + strings.ToUpper(c.Nom) + " ☣"
+
 	fmt.Println(TitleBox(titre))
-	fmt.Printf("%sNom       :%s %s%s%s\n", Bold, Reset, BrightWhite, c.Nom, Reset)
-	fmt.Printf("%sClasse    :%s %s%s%s\n", Bold, Reset, BrightCyan, c.Type, Reset)
-	fmt.Printf("%sNiveau    :%s %s%d%s\n", Bold, Reset, BrightYellow, c.Level, Reset)
-	fmt.Printf("%sPV        :%s %s %d/%d\n", Bold, Reset, HPBar(c.PV, c.PVBase), c.PV, c.PVBase)
-	fmt.Printf("%sMana      :%s %s %d/%d\n", Bold, Reset, ManaBar(c.Mana, c.ManaMax), c.Mana, c.ManaMax)
-	fmt.Printf("%sExp       :%s %s %d/%d\n", Bold, Reset, ExpBar(c.Exp, c.MaxExp), c.Exp, c.MaxExp)
-	fmt.Printf("%sOr        :%s %s%d 💰%s\n", Bold, Reset, BrightYellow, c.Gold, Reset)
-	fmt.Printf("%sAttaques  :%s %s%s%s\n", Bold, Reset, Green, strings.Join(c.Attacks, ", "), Reset)
-	fmt.Printf("%sCasque    :%s %s\n", Bold, Reset, displayOrEmpty(c.Equip.Head))
-	fmt.Printf("%sTorse     :%s %s\n", Bold, Reset, displayOrEmpty(c.Equip.Torso))
-	fmt.Printf("%sPieds     :%s %s\n", Bold, Reset, displayOrEmpty(c.Equip.Feet))
-	fmt.Println(Separator())
+
+	fmt.Println()
+
+	fmt.Println(
+		Panel(
+			"IDENTITÉ",
+
+			StatLine("Nom", BrightWhite+c.Nom+Reset),
+			StatLine("Classe", BrightCyan+c.Type+Reset),
+			StatLine("Niveau", BrightYellow+fmt.Sprintf("%d", c.Level)+Reset),
+			StatLine("Or", BrightYellow+fmt.Sprintf("%d 💰", c.Gold)+Reset),
+		),
+	)
+
+	fmt.Println()
+
+	fmt.Println(
+		Panel(
+			"RESSOURCES",
+
+			fmt.Sprintf("PV    %s %d/%d", HPBar(c.PV, c.PVBase), c.PV, c.PVBase),
+			fmt.Sprintf("Mana  %s %d/%d", ManaBar(c.Mana, c.ManaMax), c.Mana, c.ManaMax),
+			fmt.Sprintf("Exp   %s %d/%d", ExpBar(c.Exp, c.MaxExp), c.Exp, c.MaxExp),
+		),
+	)
+
+	fmt.Println()
+
+	fmt.Println(
+		Panel(
+			"ÉQUIPEMENT",
+
+			StatLine("Casque", displayOrEmpty(c.Equip.Head)),
+			StatLine("Torse", displayOrEmpty(c.Equip.Torso)),
+			StatLine("Pieds", displayOrEmpty(c.Equip.Feet)),
+		),
+	)
+
+	fmt.Println()
+
+	attaques := strings.Join(c.Attacks, ", ")
+
+	if attaques == "" {
+		attaques = Dim + "Aucune" + Reset
+	} else {
+		attaques = Green + attaques + Reset
+	}
+
+	fmt.Println(
+		Panel(
+			"ATTAQUES CONNUES",
+			attaques,
+		),
+	)
+
 }
 
 func displayOrEmpty(s string) string {

@@ -2,9 +2,57 @@ package classes
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
+
+var ansiPattern = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// stripANSI retire les codes couleur/style avant de mesurer une chaîne.
+func stripANSI(s string) string {
+	return ansiPattern.ReplaceAllString(s, "")
+}
+
+// runeWidth estime la largeur d'affichage d'un caractère dans un
+// terminal. Les émojis et symboles larges comptent pour 2 colonnes,
+// les sélecteurs de variante/ZWJ pour 0, le reste pour 1.
+func runeWidth(r rune) int {
+
+	switch {
+
+	case r == 0xFE0F || r == 0x200D:
+		return 0
+
+	case r >= 0x1F000 && r <= 0x1FFFF:
+		return 2
+
+	case r >= 0x2600 && r <= 0x27BF:
+		return 2
+
+	case r >= 0x2B00 && r <= 0x2BFF:
+		return 2
+	}
+
+	return 1
+
+}
+
+// visibleWidth calcule la largeur réellement affichée d'une chaîne
+// (codes ANSI ignorés, caractères larges comptés double). Utilisé
+// pour que les cadres (Panel, TitleBox) restent bien alignés même
+// avec des couleurs et des emojis dedans.
+func visibleWidth(s string) int {
+
+	width := 0
+
+	for _, r := range stripANSI(s) {
+		width += runeWidth(r)
+	}
+
+	return width
+
+}
 
 const (
 	Reset  = "\033[0m"
@@ -149,7 +197,7 @@ func TitleBox(title string) string {
 
 	inner := " " + title + " "
 
-	width := len([]rune(inner))
+	width := visibleWidth(inner)
 
 	top :=
 		"╔" +
@@ -177,9 +225,11 @@ func Panel(
 
 	var builder strings.Builder
 
-	titleLength := len([]rune(title))
+	const innerWidth = 56
 
-	dashes := 54 - titleLength
+	titleWidth := visibleWidth(title)
+
+	dashes := innerWidth - 1 - titleWidth
 
 	if dashes < 1 {
 		dashes = 1
@@ -197,9 +247,9 @@ func Panel(
 
 	for _, line := range lines {
 
-		lineLength := len([]rune(line))
+		lineWidth := visibleWidth(line)
 
-		padding := 56 - lineLength
+		padding := innerWidth - lineWidth
 
 		if padding < 0 {
 			padding = 0
@@ -214,11 +264,33 @@ func Panel(
 	builder.WriteString(Bold)
 	builder.WriteString(BrightBlue)
 	builder.WriteString("└")
-	builder.WriteString(strings.Repeat("─", 58))
+	builder.WriteString(strings.Repeat("─", innerWidth+2))
 	builder.WriteString("┘")
 	builder.WriteString(Reset)
 
 	return builder.String()
+
+}
+
+// StatLine formate une ligne "label : valeur" avec le label aligné,
+// prête à être passée à Panel(). labelWidth est la largeur (en
+// colonnes visibles) réservée au label avant le ":".
+func StatLine(label string, value string) string {
+
+	const labelWidth = 10
+
+	pad := labelWidth - visibleWidth(label)
+
+	if pad < 0 {
+		pad = 0
+	}
+
+	return Bold +
+		label +
+		strings.Repeat(" ", pad) +
+		Reset +
+		" : " +
+		value
 
 }
 
