@@ -77,6 +77,57 @@ const (
 	BrightWhite   = "\033[97m"
 )
 
+// RGB renvoie un code couleur ANSI 24 bits (vraie couleur), pour
+// des teintes précises et des dégradés que la palette 16 couleurs
+// ne permet pas.
+func RGB(r, g, b int) string {
+	return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b)
+}
+
+var (
+	ThemeNeonGreen   = RGB(57, 255, 90)
+	ThemeToxicYellow = RGB(212, 255, 0)
+	ThemeBloodRed    = RGB(255, 40, 60)
+	ThemeRustOrange  = RGB(255, 140, 40)
+	ThemeInfected    = RGB(175, 70, 255)
+	ThemeSkyCyan     = RGB(80, 210, 255)
+	ThemeGold        = RGB(255, 195, 40)
+	ThemeBone        = RGB(230, 230, 220)
+)
+
+func lerp(a, b int, t float64) int {
+	return int(float64(a) + float64(b-a)*t)
+}
+
+// gradientColor interpole entre deux couleurs RGB selon t (0 à 1).
+func gradientColor(from, to [3]int, t float64) string {
+
+	if t < 0 {
+		t = 0
+	}
+
+	if t > 1 {
+		t = 1
+	}
+
+	return RGB(
+		lerp(from[0], to[0], t),
+		lerp(from[1], to[1], t),
+		lerp(from[2], to[2], t),
+	)
+
+}
+
+func maxInt(a, b int) int {
+
+	if a > b {
+		return a
+	}
+
+	return b
+
+}
+
 func ClearScreen() {
 	fmt.Print("\033[2J\033[H")
 }
@@ -113,47 +164,71 @@ func ratio(current, maximum int) float64 {
 
 }
 
-func bar(
+var barBlocks = []rune{' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉'}
+
+// gradientBar dessine une barre de progression en dégradé de
+// couleur (from → to selon le taux de remplissage), avec une
+// précision au demi-caractère près pour un rendu plus fin qu'un
+// simple blocage par caractère entier.
+func gradientBar(
 	current int,
 	maximum int,
 	width int,
-	color string,
+	from [3]int,
+	to [3]int,
 ) string {
 
 	r := ratio(current, maximum)
 
-	filled := int(r * float64(width))
+	exact := r * float64(width)
 
-	if filled > width {
-		filled = width
+	full := int(exact)
+
+	if full > width {
+		full = width
 	}
 
-	if filled < 0 {
-		filled = 0
+	frac := exact - float64(full)
+
+	var b strings.Builder
+
+	b.WriteString(gradientColor(from, to, r))
+	b.WriteString(strings.Repeat("█", full))
+
+	if full < width && frac > 0 {
+
+		idx := int(frac * float64(len(barBlocks)))
+
+		if idx >= len(barBlocks) {
+			idx = len(barBlocks) - 1
+		}
+
+		b.WriteRune(barBlocks[idx])
+
+		full++
 	}
 
-	return color + strings.Repeat("█", filled) + Reset + Dim + strings.Repeat("░", width-filled) + Reset
+	b.WriteString(Reset)
+
+	if width-full > 0 {
+		b.WriteString(Dim)
+		b.WriteString(strings.Repeat("░", width-full))
+		b.WriteString(Reset)
+	}
+
+	return b.String()
 
 }
 
 func HPBar(current, maximum int) string {
 
-	r := ratio(current, maximum)
-
-	color := Green
-
-	if r <= 0.25 {
-		color = BrightRed
-	} else if r <= 0.5 {
-		color = Yellow
-	}
-
 	return "[" +
-		bar(
+		gradientBar(
 			current,
 			maximum,
 			20,
-			color,
+			[3]int{235, 45, 65},
+			[3]int{60, 225, 95},
 		) +
 		"]"
 
@@ -162,11 +237,12 @@ func HPBar(current, maximum int) string {
 func ManaBar(current, maximum int) string {
 
 	return "[" +
-		bar(
+		gradientBar(
 			current,
 			maximum,
 			20,
-			Cyan,
+			[3]int{40, 80, 200},
+			[3]int{90, 220, 255},
 		) +
 		"]"
 
@@ -175,11 +251,12 @@ func ManaBar(current, maximum int) string {
 func ExpBar(current, maximum int) string {
 
 	return "[" +
-		bar(
+		gradientBar(
 			current,
 			maximum,
 			20,
-			Magenta,
+			[3]int{130, 40, 200},
+			[3]int{225, 120, 255},
 		) +
 		"]"
 
@@ -199,22 +276,42 @@ func TitleBox(title string) string {
 
 	width := visibleWidth(inner)
 
-	top :=
-		"╔" +
-			strings.Repeat("═", width) +
-			"╗"
+	from := [3]int{57, 255, 90}
+	to := [3]int{255, 40, 60}
+
+	var top strings.Builder
+	var bottom strings.Builder
+
+	top.WriteString("╔")
+	bottom.WriteString("╚")
+
+	for i := 0; i < width; i++ {
+
+		t := float64(i) / float64(maxInt(width-1, 1))
+
+		top.WriteString(gradientColor(from, to, t))
+		top.WriteString("═")
+
+		bottom.WriteString(gradientColor(to, from, t))
+		bottom.WriteString("═")
+	}
+
+	top.WriteString(Reset)
+	top.WriteString(gradientColor(from, to, 1))
+	top.WriteString("╗")
+	top.WriteString(Reset)
+
+	bottom.WriteString(Reset)
+	bottom.WriteString(gradientColor(to, from, 1))
+	bottom.WriteString("╝")
+	bottom.WriteString(Reset)
 
 	middle :=
-		"║" +
-			inner +
-			"║"
+		ThemeBone + "║" + Reset +
+			Bold + BrightWhite + inner + Reset +
+			ThemeBone + "║" + Reset
 
-	bottom :=
-		"╚" +
-			strings.Repeat("═", width) +
-			"╝"
-
-	return Bold + BrightCyan + top + "\n" + middle + "\n" + bottom + Reset
+	return top.String() + "\n" + middle + "\n" + bottom.String()
 
 }
 
@@ -236,9 +333,15 @@ func Panel(
 	}
 
 	builder.WriteString(Bold)
-	builder.WriteString(BrightBlue)
+	builder.WriteString(ThemeSkyCyan)
 	builder.WriteString("┌─ ")
+	builder.WriteString(Reset)
+	builder.WriteString(Bold)
+	builder.WriteString(ThemeGold)
 	builder.WriteString(title)
+	builder.WriteString(Reset)
+	builder.WriteString(Bold)
+	builder.WriteString(ThemeSkyCyan)
 	builder.WriteString(" ")
 	builder.WriteString(strings.Repeat("─", dashes))
 	builder.WriteString("┐")
@@ -255,14 +358,19 @@ func Panel(
 			padding = 0
 		}
 
+		builder.WriteString(ThemeSkyCyan)
 		builder.WriteString("│ ")
+		builder.WriteString(Reset)
 		builder.WriteString(line)
 		builder.WriteString(strings.Repeat(" ", padding))
-		builder.WriteString(" │\n")
+		builder.WriteString(ThemeSkyCyan)
+		builder.WriteString(" │")
+		builder.WriteString(Reset)
+		builder.WriteString("\n")
 	}
 
 	builder.WriteString(Bold)
-	builder.WriteString(BrightBlue)
+	builder.WriteString(ThemeSkyCyan)
 	builder.WriteString("└")
 	builder.WriteString(strings.Repeat("─", innerWidth+2))
 	builder.WriteString("┘")
@@ -291,6 +399,38 @@ func StatLine(label string, value string) string {
 		Reset +
 		" : " +
 		value
+
+}
+
+var logoLines = []string{
+	`  ___  _   _ _____ ____  ____  _____    _    _  __`,
+	` / _ \| | | |_   _| __ )|  _ \| ____|  / \  | |/ /`,
+	`| | | | | | | | | |  _ \| |_) |  _|   / _ \ | ' / `,
+	`| |_| | |_| | | | | |_) |  _ <| |___ / ___ \| . \ `,
+	` \___/ \___/  |_| |____/|_| \_\_____/_/   \_\_|\_\`,
+}
+
+// Logo renvoie le grand titre "OUTBREAK" en ASCII art, avec un
+// dégradé vertical du vert toxique vers le rouge infecté.
+func Logo() string {
+
+	var b strings.Builder
+
+	from := [3]int{57, 255, 90}
+	to := [3]int{255, 40, 60}
+
+	for i, line := range logoLines {
+
+		t := float64(i) / float64(maxInt(len(logoLines)-1, 1))
+
+		b.WriteString(gradientColor(from, to, t))
+		b.WriteString(Bold)
+		b.WriteString(line)
+		b.WriteString(Reset)
+		b.WriteString("\n")
+	}
+
+	return b.String()
 
 }
 
