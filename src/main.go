@@ -3,83 +3,145 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"sort"
 	"strings"
 	"time"
 
-	"outbreak/casino"
 	"outbreak/classes"
-	"outbreak/forgeron"
-	"outbreak/inventaire"
-	"outbreak/marchand"
-	"outbreak/monstre"
 )
 
 type Weapon struct {
-	Name, Rarity                       string
-	Damage, Ammo, MaxAmmo, Crit, Price int
+	Name   string
+	Damage int
+	Crit   int
+	Price  int
+	Scrap  int
+	Level  int
 }
+
 type Enemy struct {
-	Name                                              string
-	MaxHP, HP, Attack, Defense, Exp, Gold, Initiative int
-	Boss                                              bool
-	Phase                                             int
+	Name    string
+	HP      int
+	MaxHP   int
+	Attack  int
+	Defense int
+	XP      int
+	Gold    int
+	Scrap   int
+	Boss    bool
 }
+
 type Zone struct {
-	Name, Icon           string
-	Level, Waves, Reward int
-	Enemies              []func() Enemy
-	Boss                 func() Enemy
+	Name    string
+	Icon    string
+	Level   int
+	Danger  int
+	Waves   int
+	Reward  int
+	Enemies []Enemy
+	Boss    Enemy
+}
+
+type Survivor struct {
+	Name        string
+	Role        string
+	Level       int
+	Description string
 }
 
 type Game struct {
-	Player   *classes.Classe
-	Weapon   Weapon
-	Medkits  int
-	Grenades int
-	Scrap    int
-	Unlocked map[string]bool
-	Cleared  map[string]bool
-	Day      int
+	Player         *classes.Classe
+	Weapon         Weapon
+	Scrap          int
+	Components     int
+	Medicine       int
+	Fuel           int
+	Food           int
+	Day            int
+	Night          bool
+	RefugeLevel    int
+	WorkshopLevel  int
+	GeneratorLevel int
+	StorageLevel   int
+	DefenseLevel   int
+	Reputation     int
+	Survivors      []Survivor
+	Unlocked       map[string]bool
+	Cleared        map[string]bool
+	WeaponLevels   map[string]int
+	MissionsDone   int
 }
 
 var weapons = []Weapon{
-	{"Couteau de survie", "Commun", 8, 0, 0, 5, 20},
-	{"Pistolet M9", "Commun", 15, 12, 12, 10, 80},
-	{"Shotgun", "Rare", 28, 6, 6, 8, 180},
-	{"SMG Viper", "Rare", 24, 24, 24, 12, 260},
-	{"AK-47", "Épique", 38, 30, 30, 15, 450},
-	{"Fusil de précision", "Épique", 62, 5, 5, 25, 650},
-	{"Lance-roquettes", "Légendaire", 100, 3, 3, 20, 1200},
-}
-
-func enemy(name string, hp, atk, def, exp, gold, ini int) func() Enemy {
-	return func() Enemy {
-		return Enemy{Name: name, MaxHP: hp, HP: hp, Attack: atk, Defense: def, Exp: exp, Gold: gold, Initiative: ini}
-	}
-}
-func boss(name string, hp, atk, def, exp, gold int) func() Enemy {
-	return func() Enemy {
-		return Enemy{Name: name, MaxHP: hp, HP: hp, Attack: atk, Defense: def, Exp: exp, Gold: gold, Initiative: 5, Boss: true, Phase: 1}
-	}
+	{"Couteau de survie", 8, 5, 20, 0, 1},
+	{"Pistolet M9", 16, 10, 90, 8, 2},
+	{"Shotgun", 28, 8, 190, 18, 4},
+	{"SMG Viper", 24, 14, 280, 25, 5},
+	{"AK-47", 38, 15, 480, 35, 7},
+	{"Fusil de précision", 62, 25, 700, 50, 10},
+	{"Lance-roquettes", 100, 20, 1300, 80, 14},
 }
 
 var zones = []Zone{
-	{"Centre-ville", "🏙️", 1, 5, 120, []func() Enemy{enemy("Infecté errant", 45, 7, 1, 25, 12, 4), enemy("Coureur", 65, 11, 2, 35, 18, 8)}, boss("Mutant du centre", 260, 24, 5, 180, 120)},
-	{"Hôpital", "🏥", 3, 6, 220, []func() Enemy{enemy("Infecté médical", 80, 13, 3, 45, 22, 5), enemy("Coureur malade", 95, 17, 2, 55, 28, 9), enemy("Infecté blindé", 125, 15, 7, 70, 35, 2)}, boss("Chirurgien infecté", 420, 30, 8, 300, 220)},
-	{"Usine", "🏭", 6, 7, 360, []func() Enemy{enemy("Ouvrier infecté", 120, 20, 6, 70, 35, 4), enemy("Brute", 180, 25, 9, 100, 50, 2), enemy("Mutant toxique", 150, 23, 5, 110, 60, 6)}, boss("Titan industriel", 600, 38, 12, 500, 400)},
-	{"Base militaire", "🪖", 9, 8, 550, []func() Enemy{enemy("Soldat contaminé", 170, 28, 10, 110, 65, 7), enemy("Lourd infecté", 240, 32, 14, 150, 80, 3), enemy("Traqueur", 130, 35, 7, 135, 75, 10)}, boss("Commandant zéro", 800, 45, 16, 750, 650)},
-	{"Zone contaminée", "☣️", 13, 10, 900, []func() Enemy{enemy("Mutant alpha", 240, 36, 12, 180, 100, 7), enemy("Abomination", 320, 42, 18, 240, 140, 2), enemy("Prédateur", 200, 50, 10, 220, 130, 11)}, boss("Roi des infectés", 1200, 58, 20, 1500, 1200)},
+	{
+		"Centre-ville", "🏙️", 1, 25, 4, 100,
+		[]Enemy{{"Rôdeur", 45, 45, 7, 1, 25, 12, 4, false}, {"Coureur", 65, 65, 11, 2, 35, 18, 6, false}, {"Pillard infecté", 75, 75, 10, 3, 45, 25, 8, false}},
+		Enemy{"Mutant du centre", 260, 260, 24, 5, 180, 120, 30, true},
+	},
+	{
+		"Hôpital abandonné", "🏥", 3, 40, 5, 200,
+		[]Enemy{{"Infecté médical", 80, 80, 13, 3, 45, 22, 8, false}, {"Coureur malade", 95, 95, 17, 2, 55, 28, 10, false}, {"Infirmier infecté", 120, 120, 15, 6, 70, 35, 14, false}},
+		Enemy{"Chirurgien infecté", 420, 420, 30, 8, 300, 220, 45, true},
+	},
+	{
+		"Usine", "🏭", 6, 55, 6, 340,
+		[]Enemy{{"Ouvrier infecté", 120, 120, 20, 6, 70, 35, 14, false}, {"Brute", 180, 180, 25, 9, 100, 50, 20, false}, {"Mutant toxique", 150, 150, 23, 5, 110, 60, 22, false}},
+		Enemy{"Titan industriel", 600, 600, 38, 12, 500, 400, 70, true},
+	},
+	{
+		"Base militaire", "🪖", 9, 70, 7, 520,
+		[]Enemy{{"Soldat contaminé", 170, 170, 28, 10, 110, 65, 20, false}, {"Lourd infecté", 240, 240, 32, 14, 150, 80, 28, false}, {"Traqueur", 130, 130, 35, 7, 135, 75, 24, false}},
+		Enemy{"Commandant Zéro", 800, 800, 45, 16, 750, 650, 100, true},
+	},
+	{
+		"Laboratoire", "🧪", 13, 85, 8, 850,
+		[]Enemy{{"Mutant alpha", 240, 240, 36, 12, 180, 100, 30, false}, {"Abomination", 320, 320, 42, 18, 240, 140, 40, false}, {"Prédateur", 200, 200, 50, 10, 220, 130, 35, false}},
+		Enemy{"Roi des infectés", 1200, 1200, 58, 20, 1500, 1200, 180, true},
+	},
+}
+
+var survivors = []Survivor{
+	{"Milo", "Mécanicien", 1, "Réduit le coût en ferraille des améliorations."},
+	{"Sarah", "Médecin", 1, "Améliore les soins et produit des médicaments."},
+	{"Nora", "Éclaireuse", 1, "Augmente les chances de trouver du butin."},
+	{"Eli", "Gardien", 1, "Renforce les défenses du refuge."},
 }
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	c := characterCreation()
-	g := &Game{Player: &c, Weapon: weapons[0], Medkits: 2, Grenades: 1, Scrap: 10, Unlocked: map[string]bool{}, Cleared: map[string]bool{}, Day: 1}
+	g := &Game{
+		Player:         &c,
+		Weapon:         weapons[0],
+		Scrap:          12,
+		Components:     2,
+		Medicine:       3,
+		Fuel:           8,
+		Food:           8,
+		Day:            1,
+		RefugeLevel:    1,
+		WorkshopLevel:  1,
+		GeneratorLevel: 1,
+		StorageLevel:   1,
+		DefenseLevel:   1,
+		Reputation:     0,
+		Survivors:      []Survivor{},
+		Unlocked:       map[string]bool{zones[0].Name: true},
+		Cleared:        map[string]bool{},
+		WeaponLevels:   map[string]int{},
+	}
 	g.Player.WeaponName = g.Weapon.Name
 	g.Player.WeaponDamage = g.Weapon.Damage
 	g.Player.WeaponCrit = g.Weapon.Crit
-	g.Unlocked[zones[0].Name] = true
 	g.loop()
 }
 
@@ -96,13 +158,12 @@ func characterCreation() classes.Classe {
 			name = formatName(s)
 			break
 		}
-		fmt.Println(classes.BrightRed + "Nom invalide." + classes.Reset)
+		fmt.Println(classes.BrightRed + "Nom invalide. Utilise uniquement des lettres." + classes.Reset)
 	}
 	fmt.Println(classes.Panel("CLASSES", "[1] Survivant — équilibré", "[2] Punk — critique", "[3] Médecin de fortune — soins", "[4] Sauveur — défense"))
-	var kind string
-	for {
-		x := classes.ReadInt()
-		switch x {
+	kind := ""
+	for kind == "" {
+		switch classes.ReadInt() {
 		case 1:
 			kind = "Survivant"
 		case 2:
@@ -112,29 +173,19 @@ func characterCreation() classes.Classe {
 		case 4:
 			kind = "Sauveur"
 		}
-		if kind != "" {
-			break
+		if kind == "" {
+			fmt.Print("Classe > ")
 		}
-		fmt.Print("Classe > ")
 	}
 	c := classes.Classes[kind]
-	c.Nom = name
-	c.Type = kind
-	c.Level = 1
-	c.PV = c.PVBase
-	c.Mana = c.ManaMax
+	c.Nom, c.Type = name, kind
+	c.Level, c.PV, c.Mana = 1, c.PVBase, c.ManaMax
 	c.Attacks = []string{"Attaque basique"}
 	c.Inventory = []string{"Bandage"}
 	c.SkillPoints = 1
-	c.WeaponName = "Couteau de survie"
-	c.WeaponDamage = 8
-	c.WeaponCrit = 5
-	classes.ClearScreen()
-	fmt.Println(classes.TitleBox("✔ SURVIVANT CRÉÉ"))
-	fmt.Println(classes.Panel("PERSONNAGE", "Nom : "+c.Nom, "Classe : "+c.Type, fmt.Sprintf("PV : %d | Mana : %d | Or : %d", c.PV, c.Mana, c.Gold)))
-	classes.Pause()
 	return c
 }
+
 func validName(s string) bool {
 	if s == "" {
 		return false
@@ -158,59 +209,68 @@ func formatName(s string) string {
 func (g *Game) loop() {
 	for {
 		classes.ClearScreen()
-		c := g.Player
 		fmt.Println(classes.Logo())
-		fmt.Println(classes.TitleBox("☣ REFUGE CENTRAL • JOUR " + fmt.Sprint(g.Day) + " ☣"))
-		fmt.Println(classes.Panel(c.Nom+" • "+c.Type, fmt.Sprintf("PV   %s %d/%d", classes.HPBar(c.PV, c.PVBase), c.PV, c.PVBase), fmt.Sprintf("Mana %s %d/%d", classes.ManaBar(c.Mana, c.ManaMax), c.Mana, c.ManaMax), fmt.Sprintf("XP   %s %d/%d", classes.ExpBar(c.Exp, c.MaxExp), c.Exp, c.MaxExp), fmt.Sprintf("🔫 %s [%s]  Dégâts %d  Crit %d%%", g.Weapon.Name, g.Weapon.Rarity, g.Weapon.Damage, g.Weapon.Crit), fmt.Sprintf("💰 %d   🔩 %d   💉 %d   💣 %d", c.Gold, g.Scrap, g.Medkits, g.Grenades)))
-		fmt.Println(classes.Panel("CENTRE DE COMMANDE", "[1] 🗺️ Partir en expédition", "[2] 🎒 Inventaire / équipement", "[3] 🛒 Marchand", "[4] 🔨 Forgeron", "[5] 👤 Fiche du survivant", "[6] ⚔️ Combat d'entraînement", "[7] 🎰 Casino", "[8] 🌳 Compétences", "[9] 💾 Statistiques", "[0] Quitter"))
+		fmt.Println(classes.TitleBox("☣ OUTBREAK — REFUGE DES SURVIVANTS ☣"))
+		fmt.Println(classes.Panel("ÉTAT DU REFUGE",
+			fmt.Sprintf("Jour %d — %s", g.Day, ternary(g.Night, "🌙 NUIT", "☀️ JOUR")),
+			fmt.Sprintf("❤️ %d/%d PV   ⭐ Niveau %d   💰 %d", g.Player.PV, g.Player.PVBase, g.Player.Level, g.Player.Gold),
+			fmt.Sprintf("🔩 %d   ⚙️ %d   💊 %d   ⛽ %d   🍖 %d", g.Scrap, g.Components, g.Medicine, g.Fuel, g.Food),
+			fmt.Sprintf("🏚️ Refuge %d   🔨 Atelier %d   ⚡ Générateur %d", g.RefugeLevel, g.WorkshopLevel, g.GeneratorLevel),
+		))
+		fmt.Println(classes.Panel("ACTIONS",
+			"[1] 🗺️ Partir en expédition",
+			"[2] 🎒 Inventaire & équipement",
+			"[3] 🛒 Marché noir",
+			"[4] 🔨 Atelier & fabrication",
+			"[5] 🏚️ Gérer le refuge",
+			"[6] 👥 Survivants",
+			"[7] 📻 Missions & événements",
+			"[8] 👤 Fiche du personnage",
+			"[0] Quitter",
+		))
 		fmt.Print("\nAction > ")
-		x := classes.ReadInt()
-		switch x {
+		switch classes.ReadInt() {
 		case 1:
-			g.mapMenu()
+			g.expeditionMenu()
 		case 2:
 			g.inventoryMenu()
 		case 3:
-			marchand.Merchant(c)
+			g.market()
 		case 4:
-			forgeron.BlacksmithTiers(c)
+			g.workshop()
 		case 5:
-			classes.ClearScreen()
-			classes.DisplayInfo(c)
-			classes.Pause()
+			g.refuge()
 		case 6:
-			monstre.SimulationFight(c)
+			g.survivorMenu()
 		case 7:
-			casino.Casino(c)
+			g.missions()
 		case 8:
-			g.skills()
-		case 9:
-			g.stats()
-		case 0:
-			return
-		default:
-			fmt.Println("Choix invalide.")
+			classes.ClearScreen()
+			classes.DisplayInfo(g.Player)
 			classes.Pause()
+		case 0:
+			fmt.Println("À bientôt, survivant.")
+			return
 		}
 	}
 }
 
-func (g *Game) mapMenu() {
+func (g *Game) expeditionMenu() {
 	for {
 		classes.ClearScreen()
-		fmt.Println(classes.TitleBox("🗺️ CARTE DES ZONES"))
+		fmt.Println(classes.TitleBox("🗺️ CARTE DE LA ZONE MORTE"))
 		for i, z := range zones {
+			unlocked := g.Unlocked[z.Name]
 			status := "🔒"
-			if g.Unlocked[z.Name] {
-				status = "🟢"
+			if unlocked {
+				status = "☣️"
 			}
 			if g.Cleared[z.Name] {
-				status = "🏆"
+				status = "✅"
 			}
-			fmt.Printf("[%d] %s %s — niveau %d — %d vagues %s\n", i+1, z.Icon, z.Name, z.Level, z.Waves, status)
+			fmt.Printf("[%d] %s %-22s Niveau %-2d Danger %-3d%% %s\n", i+1, z.Icon, z.Name, z.Level, z.Danger, status)
 		}
 		fmt.Println("[0] Retour")
-		fmt.Print("Zone > ")
 		x := classes.ReadInt()
 		if x == 0 {
 			return
@@ -219,84 +279,93 @@ func (g *Game) mapMenu() {
 			continue
 		}
 		z := zones[x-1]
-		if !g.Unlocked[z.Name] {
+		if !g.Unlocked[z.Name] || g.Player.Level < z.Level {
 			fmt.Println("Zone verrouillée.")
 			classes.Pause()
 			continue
 		}
-		g.expedition(z)
+		g.runZone(z)
 	}
 }
 
-func (g *Game) expedition(z Zone) {
-	c := g.Player
-	for wave := 1; wave <= z.Waves; wave++ {
-		classes.ClearScreen()
-		fmt.Println(classes.TitleBox(z.Icon + " " + z.Name + " • VAGUE " + fmt.Sprint(wave) + "/" + fmt.Sprint(z.Waves)))
-		enemies := g.spawnWave(z, wave)
-		if !g.combat(enemies, wave, z) {
+func (g *Game) runZone(z Zone) {
+	classes.ClearScreen()
+	fmt.Println(classes.TitleBox(z.Icon + " EXPÉDITION — " + z.Name))
+	fmt.Println(classes.Panel("BRIEFING", fmt.Sprintf("Niveau recommandé : %d", z.Level), fmt.Sprintf("Danger : %d%%", z.Danger), fmt.Sprintf("Vagues : %d + boss", z.Waves), "Objectif : survivre et ramener des ressources."))
+	fmt.Println("[1] Partir   [2] Annuler")
+	if classes.ReadInt() != 1 {
+		return
+	}
+	g.Player.PV = g.Player.PVBase
+	g.Player.Mana = g.Player.ManaMax
+	for w := 1; w <= z.Waves; w++ {
+		enemies := g.wave(z, w)
+		if !g.combat(enemies, w, z.Name, false) {
 			return
 		}
-		if wave < z.Waves && rand.Intn(100) < 65 {
-			g.event()
+		g.recoverBetween()
+		if w < z.Waves && rand.Intn(100) < 45 {
+			if !g.event() {
+				return
+			}
 		}
 	}
-	classes.ClearScreen()
-	fmt.Println(classes.TitleBox("🏆 ZONE NETTOYÉE"))
-	fmt.Println(classes.Panel(z.Name, "Vous avez survécu aux "+fmt.Sprint(z.Waves)+" vagues.", fmt.Sprintf("Récompense : %d 💰 + %d 🔩", z.Reward, z.Waves*5)))
-	c.Gold += z.Reward
-	g.Scrap += z.Waves * 5
+	boss := z.Boss
+	boss.HP = boss.MaxHP + g.Player.Level*12
+	boss.MaxHP = boss.HP
+	boss.Attack += g.Player.Level / 2
+	if !g.combat([]Enemy{boss}, z.Waves, z.Name, true) {
+		return
+	}
 	g.Cleared[z.Name] = true
+	g.Player.Gold += z.Reward
+	g.Scrap += z.Waves*5 + boss.Scrap
+	gainXP(g.Player, z.Reward/2)
+	g.reputation(2)
 	g.unlockNext(z)
-	g.healAfterRun()
+	fmt.Println(classes.Panel("🏆 EXPÉDITION RÉUSSIE", fmt.Sprintf("+%d 💰", z.Reward), fmt.Sprintf("+%d 🔩", z.Waves*5+boss.Scrap), "La zone est maintenant nettoyée."))
+	g.advanceDay()
 	classes.Pause()
 }
-func (g *Game) spawnWave(z Zone, w int) []Enemy {
+
+func (g *Game) wave(z Zone, w int) []Enemy {
 	n := 1 + (w+1)/2
 	if n > 4 {
 		n = 4
 	}
 	out := make([]Enemy, 0, n)
 	for i := 0; i < n; i++ {
-		e := z.Enemies[rand.Intn(len(z.Enemies))]()
+		e := z.Enemies[rand.Intn(len(z.Enemies))]
 		scale := 1 + (w-1)/4
 		e.MaxHP *= scale
 		e.HP = e.MaxHP
 		e.Attack += w * 2
-		e.Exp += w * 8
-		e.Gold += w * 5
-		out = append(out, e)
-	}
-	if w == z.Waves {
-		e := z.Boss()
+		e.XP += w * 8
+		e.Gold += w * 4
 		out = append(out, e)
 	}
 	return out
 }
 
-func (g *Game) combat(enemies []Enemy, wave int, z Zone) bool {
-	c := g.Player
-	for len(enemies) > 0 && c.PV > 0 {
+func (g *Game) combat(enemies []Enemy, wave int, zone string, boss bool) bool {
+	for len(enemies) > 0 && g.Player.PV > 0 {
 		classes.ClearScreen()
-		fmt.Println(classes.TitleBox("⚔️ COMBAT • " + z.Name))
-		fmt.Printf("%s  PV %d/%d   Mana %d/%d   🔫 %s (%d/%d)\n", c.Nom, c.PV, c.PVBase, c.Mana, c.ManaMax, g.Weapon.Name, g.Weapon.Ammo, g.Weapon.MaxAmmo)
-		for i, e := range enemies {
-			fmt.Printf("[%d] %s %s %d/%d HP", i+1, enemyIcon(e), e.Name, e.HP, e.MaxHP)
-			if e.Boss {
-				fmt.Print(" 👑")
-			}
-			fmt.Println()
+		title := "⚔️ COMBAT"
+		if boss {
+			title = "👑 COMBAT DE BOSS"
 		}
-		fmt.Println(classes.Panel("ACTIONS", "[1] 🔫 Attaque avec arme", "[2] ⚡ Compétence", "[3] 💉 Soin", "[4] 💣 Grenade", "[5] 🔄 Recharger", "[6] 🏃 Fuir"))
-		fmt.Print("Action > ")
-		a := classes.ReadInt()
-		if a == 6 && wave < z.Waves {
-			fmt.Println("Vous fuyez l'expédition.")
-			classes.Pause()
+		fmt.Println(classes.TitleBox(title))
+		fmt.Printf("%s — Vague %d | ❤️ %d/%d | Mana %d/%d | 🔫 %s\n\n", zone, wave, g.Player.PV, g.Player.PVBase, g.Player.Mana, g.Player.ManaMax, g.Weapon.Name)
+		for i, e := range enemies {
+			fmt.Printf("[%d] %s %d/%d HP  ATK:%d DEF:%d\n", i+1, e.Name, e.HP, e.MaxHP, e.Attack, e.Defense)
+		}
+		fmt.Println(classes.Panel("ACTIONS", "[1] 🔫 Tirer", "[2] ⚡ Frappe spéciale", "[3] 💊 Soin", "[4] 💣 Grenade", "[5] 🏃 Fuir"))
+		action := classes.ReadInt()
+		if action == 5 && !boss {
 			return false
 		}
-		if a == 6 {
-			fmt.Println("Impossible de fuir le boss.")
+		if action == 5 {
+			fmt.Println("Impossible de fuir un boss.")
 			classes.Pause()
 			continue
 		}
@@ -308,51 +377,33 @@ func (g *Game) combat(enemies []Enemy, wave int, z Zone) bool {
 				continue
 			}
 		}
-		switch a {
+		switch action {
 		case 1:
-			g.shoot(&enemies[target])
+			g.attack(&enemies[target])
 		case 2:
-			g.skillAttack(&enemies[target])
+			g.skill(&enemies[target])
 		case 3:
-			g.useMedkit()
+			g.heal()
 		case 4:
 			g.grenade(enemies)
-		case 5:
-			g.reload()
 		default:
 			continue
 		}
-		if enemies[target].HP <= 0 {
-			enemies = g.killEnemy(enemies, target)
-			if len(enemies) == 0 {
-				break
+		for i := len(enemies) - 1; i >= 0; i-- {
+			if enemies[i].HP <= 0 {
+				g.kill(enemies[i])
+				enemies = append(enemies[:i], enemies[i+1:]...)
 			}
-			if target >= len(enemies) {
-				target = len(enemies) - 1
-			}
+		}
+		if len(enemies) == 0 {
+			break
 		}
 		g.enemyTurn(enemies)
 	}
-	return c.PV > 0
+	return g.Player.PV > 0
 }
-func enemyIcon(e Enemy) string {
-	if e.Boss {
-		return "👑"
-	}
-	if e.Attack >= 40 {
-		return "🧟"
-	}
-	if e.Defense >= 10 {
-		return "🛡️"
-	}
-	return "🧟‍♂️"
-}
-func (g *Game) shoot(e *Enemy) {
-	if g.Weapon.MaxAmmo > 0 && g.Weapon.Ammo <= 0 {
-		fmt.Println("Plus de munitions !")
-		classes.Pause()
-		return
-	}
+
+func (g *Game) attack(e *Enemy) {
 	d := g.Weapon.Damage + g.Player.Attaque/2
 	if rand.Intn(100) < g.Weapon.Crit {
 		d *= 2
@@ -363,13 +414,10 @@ func (g *Game) shoot(e *Enemy) {
 		d = 1
 	}
 	e.HP -= d
-	if g.Weapon.MaxAmmo > 0 {
-		g.Weapon.Ammo--
-	}
-	fmt.Printf("🔫 %s inflige %d dégâts à %s.\n", g.Weapon.Name, d, e.Name)
+	fmt.Printf("🔫 %s inflige %d dégâts.\n", g.Weapon.Name, d)
 	classes.Pause()
 }
-func (g *Game) skillAttack(e *Enemy) {
+func (g *Game) skill(e *Enemy) {
 	cost := 10
 	if g.Player.Mana < cost {
 		fmt.Println("Mana insuffisant.")
@@ -382,94 +430,88 @@ func (g *Game) skillAttack(e *Enemy) {
 		d = 2
 	}
 	e.HP -= d
-	fmt.Printf("⚡ Attaque spéciale : %d dégâts !\n", d)
+	fmt.Printf("⚡ Frappe spéciale : %d dégâts.\n", d)
 	classes.Pause()
 }
-func (g *Game) useMedkit() {
-	if g.Medkits <= 0 {
-		fmt.Println("Aucun kit médical.")
+func (g *Game) heal() {
+	if g.Medicine <= 0 {
+		fmt.Println("Plus de médicaments.")
 		classes.Pause()
 		return
 	}
-	g.Medkits--
-	heal := 50
+	g.Medicine--
+	h := 45
 	if g.Player.Type == "Médecin de fortune" {
-		heal = 75
+		h = 70
 	}
-	g.Player.PV += heal
+	g.Player.PV += h
 	if g.Player.PV > g.Player.PVBase {
 		g.Player.PV = g.Player.PVBase
 	}
-	fmt.Printf("💉 +%d PV.\n", heal)
+	fmt.Printf("💊 +%d PV.\n", h)
 	classes.Pause()
 }
-func (g *Game) grenade(enemies []Enemy) {
-	if g.Grenades <= 0 {
-		fmt.Println("Plus de grenades.")
+func (g *Game) grenade(es []Enemy) {
+	if g.Components < 2 {
+		fmt.Println("Il faut 2 composants pour fabriquer une grenade improvisée.")
 		classes.Pause()
 		return
 	}
-	g.Grenades--
-	for i := range enemies {
-		d := 25 + rand.Intn(15) - enemies[i].Defense/2
+	g.Components -= 2
+	for i := range es {
+		d := 25 + rand.Intn(15) - es[i].Defense/2
 		if d < 5 {
 			d = 5
 		}
-		enemies[i].HP -= d
+		es[i].HP -= d
 	}
-	fmt.Println("💣 Explosion ! Tous les ennemis prennent des dégâts.")
-	classes.Pause()
-}
-func (g *Game) reload() {
-	if g.Weapon.MaxAmmo == 0 {
-		fmt.Println("Cette arme ne nécessite pas de munitions.")
-		classes.Pause()
-		return
-	}
-	g.Weapon.Ammo = g.Weapon.MaxAmmo
-	fmt.Println("🔄 Chargeur plein.")
+	fmt.Println("💣 Explosion !")
 	classes.Pause()
 }
 func (g *Game) enemyTurn(es []Enemy) {
-	for i := range es {
-		if es[i].HP <= 0 {
+	for _, e := range es {
+		if e.HP <= 0 {
 			continue
 		}
-		d := es[i].Attack - g.Player.Defense/2
-		if d < 1 {
-			d = 1
-		}
+		d := e.Attack - g.Player.Defense/2
 		if g.Player.Type == "Sauveur" {
 			d = d * 75 / 100
 		}
+		if d < 1 {
+			d = 1
+		}
 		if rand.Intn(100) < 5 {
-			fmt.Printf("%s rate son attaque !\n", es[i].Name)
+			fmt.Println(e.Name, "rate son attaque !")
 			continue
 		}
 		g.Player.PV -= d
-		fmt.Printf("%s inflige %d dégâts.\n", es[i].Name, d)
+		fmt.Printf("🧟 %s inflige %d dégâts.\n", e.Name, d)
 		if g.Player.PV <= 0 {
 			g.Player.PV = 0
-			fmt.Println("☠️ Vous êtes tombé au combat.")
+			fmt.Println("☠️ Vous êtes tombé.")
 			classes.Pause()
 			return
 		}
-		time.Sleep(250 * time.Millisecond)
 	}
 }
-func (g *Game) killEnemy(e []Enemy, i int) []Enemy {
-	dead := e[i]
+func (g *Game) kill(e Enemy) {
 	g.Player.Kills++
-	g.Player.Gold += dead.Gold
-	gainXP(g.Player, dead.Exp)
-	if dead.Boss {
+	g.Player.Gold += e.Gold
+	g.Scrap += e.Scrap
+	gainXP(g.Player, e.XP)
+	if e.Boss {
 		g.Player.BossesDefeated++
-		g.Scrap += 30
-		fmt.Println("👑 BOSS VAINCU ! +30 🔩")
+		g.Components += rand.Intn(4) + 2
 	}
-	g.loot(dead)
-	e[i] = e[len(e)-1]
-	return e[:len(e)-1]
+	if rand.Intn(100) < 35+g.reputationBonus() {
+		g.Medicine++
+		fmt.Println("💊 Butin : médicament.")
+	}
+	if rand.Intn(100) < 30 {
+		g.Components++
+		fmt.Println("⚙️ Butin : composant électronique.")
+	}
+	fmt.Printf("☠ %s éliminé : +%d 💰 +%d 🔩\n", e.Name, e.Gold, e.Scrap)
 }
 
 func gainXP(c *classes.Classe, x int) {
@@ -477,111 +519,99 @@ func gainXP(c *classes.Classe, x int) {
 	for c.Exp >= c.MaxExp {
 		c.Exp -= c.MaxExp
 		c.Level++
-		c.MaxExp += 25
+		c.MaxExp += 30
 		c.PVBase += 12
 		c.PV = c.PVBase
 		c.ManaMax += 6
 		c.Mana = c.ManaMax
 		c.AttaqueBase += 2
 		c.Attaque = c.AttaqueBase
-		c.DefenseBase += 1
+		c.DefenseBase++
 		c.Defense = c.DefenseBase
 		c.SkillPoints++
 		fmt.Printf("⭐ NIVEAU %d ! +1 point de compétence\n", c.Level)
 	}
 }
-func (g *Game) loot(e Enemy) {
-	r := rand.Intn(100)
-	if r < 35 {
-		g.Scrap += 5 + rand.Intn(10)
-		fmt.Println("🔩 Ferraille récupérée.")
-	}
-	if r < 18 {
-		g.Medkits++
-		fmt.Println("💉 Kit médical trouvé.")
-	}
-	if r < 10 {
-		g.Grenades++
-		fmt.Println("💣 Grenade trouvée.")
-	}
-	if e.Boss {
-		fmt.Println("🎁 Le boss laisse tomber un équipement rare !")
-		g.Scrap += 25
-	}
-}
-func (g *Game) event() {
-	classes.ClearScreen()
-	events := []string{"🚗 Vous trouvez une voiture abandonnée.", "🏚️ Une cache de survivants est encore intacte.", "📦 Un sac de ravitaillement est coincé sous des débris.", "☣️ Vous entendez des grognements derrière une porte."}
-	e := events[rand.Intn(len(events))]
-	fmt.Println(classes.TitleBox("🎲 ÉVÉNEMENT"))
-	fmt.Println(e)
-	fmt.Println("[1] Fouiller   [2] Continuer")
-	x := classes.ReadInt()
-	if x == 1 {
-		switch {
-		case strings.HasPrefix(e, "🚗"):
-			g.Player.Gold += rand.Intn(50) + 20
-		case strings.HasPrefix(e, "🏚️"):
-			g.Medkits++
-			g.Scrap += 10
-		case strings.HasPrefix(e, "📦"):
-			g.Grenades++
-			g.Scrap += 15
-		default:
-			fmt.Println("☣️ Une petite embuscade !")
-			g.Player.PV -= 10
-		}
-	}
-	classes.Pause()
-}
-func (g *Game) unlockNext(z Zone) {
-	for i := range zones {
-		if zones[i].Name == z.Name && i+1 < len(zones) {
-			next := zones[i+1]
-			if g.Player.Level >= next.Level || g.Cleared[z.Name] {
-				g.Unlocked[next.Name] = true
-				fmt.Println("🔓 Nouvelle zone :", next.Name)
-			}
-		}
-	}
-}
-func (g *Game) healAfterRun() {
-	g.Player.PV += g.Player.PVBase / 4
-	if g.Player.PV > g.Player.PVBase {
-		g.Player.PV = g.Player.PVBase
-	}
-	g.Player.Mana = g.Player.ManaMax
-}
+
 func (g *Game) inventoryMenu() {
 	for {
 		classes.ClearScreen()
-		fmt.Println(classes.TitleBox("🎒 ARSENAL & INVENTAIRE"))
-		fmt.Println(classes.Panel("ÉQUIPEMENT", fmt.Sprintf("🔫 %s [%s] — %d dégâts — critique %d%%", g.Weapon.Name, g.Weapon.Rarity, g.Weapon.Damage, g.Weapon.Crit), fmt.Sprintf("Munitions : %d/%d", g.Weapon.Ammo, g.Weapon.MaxAmmo), fmt.Sprintf("💉 Kits : %d   💣 Grenades : %d   🔩 Ferraille : %d", g.Medkits, g.Grenades, g.Scrap), fmt.Sprintf("Capacité : %d/%d objets", len(g.Player.Inventory), g.Player.MaxInventory)))
-		fmt.Println("[1] Armes disponibles  [2] Équipement classique  [3] Consommer objet  [0] Retour")
-		x := classes.ReadInt()
-		switch x {
+		fmt.Println(classes.TitleBox("🎒 INVENTAIRE DU SURVIVANT"))
+		fmt.Println(classes.Panel("RESSOURCES", fmt.Sprintf("🔩 Ferraille : %d", g.Scrap), fmt.Sprintf("⚙️ Composants : %d", g.Components), fmt.Sprintf("💊 Médicaments : %d", g.Medicine), fmt.Sprintf("⛽ Carburant : %d", g.Fuel), fmt.Sprintf("🍖 Nourriture : %d", g.Food)))
+		fmt.Println(classes.Panel("ÉQUIPEMENT", fmt.Sprintf("🔫 %s — %d dégâts — %d%% critique", g.Weapon.Name, g.Weapon.Damage, g.Weapon.Crit), fmt.Sprintf("🎒 Objets : %d/%d", len(g.Player.Inventory), g.Player.MaxInventory)))
+		fmt.Println("[1] Utiliser un objet  [2] Vendre un objet  [3] Armes  [0] Retour")
+		switch classes.ReadInt() {
 		case 1:
-			g.weaponShop()
+			g.useInventoryItem()
 		case 2:
-			inventaire.AccessInventory(g.Player)
+			g.sellInventoryItem()
 		case 3:
-			g.quickUse()
+			g.weaponShop()
 		case 0:
 			return
 		}
 	}
 }
+
+func (g *Game) useInventoryItem() {
+	if len(g.Player.Inventory) == 0 {
+		fmt.Println("Inventaire vide.")
+		classes.Pause()
+		return
+	}
+	for i, it := range g.Player.Inventory {
+		fmt.Printf("[%d] %s\n", i+1, it)
+	}
+	fmt.Println("[0] Retour")
+	x := classes.ReadInt()
+	if x <= 0 || x > len(g.Player.Inventory) {
+		return
+	}
+	it := g.Player.Inventory[x-1]
+	switch it {
+	case "Bandage":
+		g.Player.PV += 20
+		if g.Player.PV > g.Player.PVBase {
+			g.Player.PV = g.Player.PVBase
+		}
+		classes.RemoveInventory(g.Player, it)
+		fmt.Println("🩹 Bandage utilisé.")
+	default:
+		fmt.Println("Cet objet ne peut pas être utilisé ici.")
+	}
+	classes.Pause()
+}
+func (g *Game) sellInventoryItem() {
+	if len(g.Player.Inventory) == 0 {
+		fmt.Println("Inventaire vide.")
+		classes.Pause()
+		return
+	}
+	for i, it := range g.Player.Inventory {
+		fmt.Printf("[%d] %s — 8 💰\n", i+1, it)
+	}
+	fmt.Println("[0] Retour")
+	x := classes.ReadInt()
+	if x <= 0 || x > len(g.Player.Inventory) {
+		return
+	}
+	it := g.Player.Inventory[x-1]
+	classes.RemoveInventory(g.Player, it)
+	g.Player.Gold += 8
+	fmt.Println("Vendu :", it, "pour 8 💰.")
+	classes.Pause()
+}
+
 func (g *Game) weaponShop() {
 	for {
 		classes.ClearScreen()
 		fmt.Println(classes.TitleBox("🔫 ARSENAL"))
 		for i, w := range weapons {
-			owned := w.Name == g.Weapon.Name
 			status := ""
-			if owned {
+			if w.Name == g.Weapon.Name {
 				status = " ← ÉQUIPÉ"
 			}
-			fmt.Printf("[%d] %-24s %-11s Dégâts:%3d Crit:%2d%% Prix:%4d 💰%s\n", i+1, w.Name, w.Rarity, w.Damage, w.Crit, w.Price, status)
+			fmt.Printf("[%d] %-22s Niveau %-2d Dégâts %-3d Crit %-2d%% Prix %-4d 💰%s\n", i+1, w.Name, w.Level, w.Damage, w.Crit, w.Price, status)
 		}
 		fmt.Println("[0] Retour")
 		x := classes.ReadInt()
@@ -592,7 +622,9 @@ func (g *Game) weaponShop() {
 			continue
 		}
 		w := weapons[x-1]
-		if w.Name == g.Weapon.Name {
+		if g.Player.Level < w.Level {
+			fmt.Println("Niveau insuffisant.")
+			classes.Pause()
 			continue
 		}
 		if g.Player.Gold < w.Price {
@@ -605,66 +637,406 @@ func (g *Game) weaponShop() {
 		g.Player.WeaponName = w.Name
 		g.Player.WeaponDamage = w.Damage
 		g.Player.WeaponCrit = w.Crit
-		fmt.Println("Équipé :", w.Name)
+		fmt.Println("Nouvelle arme équipée :", w.Name)
 		classes.Pause()
 	}
 }
-func (g *Game) quickUse() {
-	if g.Medkits > 0 {
-		g.useMedkit()
+
+func (g *Game) market() {
+	for {
+		classes.ClearScreen()
+		fmt.Println(classes.TitleBox("🛒 MARCHÉ NOIR"))
+		fmt.Println(classes.Panel("TON STOCK", fmt.Sprintf("💰 %d or", g.Player.Gold), fmt.Sprintf("🔩 %d ferraille", g.Scrap), fmt.Sprintf("⚙️ %d composants", g.Components)))
+		fmt.Println("[1] Vendre 5 ferrailles → 15 💰", "\n[2] Vendre 1 composant → 12 💰", "\n[3] Acheter 1 médicament → 25 💰", "\n[4] Acheter 5 ferrailles → 25 💰", "\n[0] Retour")
+		switch classes.ReadInt() {
+		case 1:
+			if g.Scrap >= 5 {
+				g.Scrap -= 5
+				g.Player.Gold += 15
+				fmt.Println("Transaction effectuée.")
+			} else {
+				fmt.Println("Pas assez de ferraille.")
+			}
+			classes.Pause()
+		case 2:
+			if g.Components > 0 {
+				g.Components--
+				g.Player.Gold += 12
+				fmt.Println("Composant vendu.")
+			} else {
+				fmt.Println("Aucun composant.")
+			}
+			classes.Pause()
+		case 3:
+			if g.Player.Gold >= 25 {
+				g.Player.Gold -= 25
+				g.Medicine++
+				fmt.Println("Médicament acheté.")
+			} else {
+				fmt.Println("Or insuffisant.")
+			}
+			classes.Pause()
+		case 4:
+			if g.Player.Gold >= 25 {
+				g.Player.Gold -= 25
+				g.Scrap += 5
+				fmt.Println("Ferraille achetée.")
+			} else {
+				fmt.Println("Or insuffisant.")
+			}
+			classes.Pause()
+		case 0:
+			return
+		}
+	}
+}
+
+func (g *Game) workshop() {
+	for {
+		classes.ClearScreen()
+		fmt.Println(classes.TitleBox("🔨 ATELIER DU REFUGE"))
+		fmt.Println(classes.Panel("NIVEAUX", fmt.Sprintf("🔨 Atelier : %d", g.WorkshopLevel), fmt.Sprintf("🔩 Ferraille : %d", g.Scrap), fmt.Sprintf("⚙️ Composants : %d", g.Components)))
+		fmt.Println("[1] Améliorer l'arme", "\n[2] Fabriquer des médicaments", "\n[3] Fabriquer une grenade", "\n[4] Améliorer l'atelier", "\n[0] Retour")
+		switch classes.ReadInt() {
+		case 1:
+			g.upgradeWeapon()
+		case 2:
+			if g.Scrap >= 4 && g.Components >= 1 {
+				g.Scrap -= 4
+				g.Components--
+				g.Medicine++
+				fmt.Println("💊 Médicament fabriqué.")
+			} else {
+				fmt.Println("Il faut 4 ferrailles et 1 composant.")
+			}
+			classes.Pause()
+		case 3:
+			if g.Scrap >= 3 && g.Components >= 2 {
+				g.Scrap -= 3
+				g.Components -= 2
+				g.Player.Inventory = append(g.Player.Inventory, "Grenade improvisée")
+				fmt.Println("💣 Grenade fabriquée.")
+			} else {
+				fmt.Println("Ressources insuffisantes.")
+			}
+			classes.Pause()
+		case 4:
+			g.upgradeWorkshop()
+		case 0:
+			return
+		}
+	}
+}
+func (g *Game) upgradeWeapon() {
+	costS := 10*g.WeaponLevels[g.Weapon.Name] + 10
+	costC := 2 + g.WeaponLevels[g.Weapon.Name]
+	if g.Scrap < costS || g.Components < costC {
+		fmt.Printf("Il faut %d 🔩 et %d ⚙️.\n", costS, costC)
+		classes.Pause()
 		return
 	}
-	fmt.Println("Aucun objet de soin rapide.")
+	g.Scrap -= costS
+	g.Components -= costC
+	g.WeaponLevels[g.Weapon.Name]++
+	g.Weapon.Damage += 4
+	g.Player.WeaponDamage = g.Weapon.Damage
+	fmt.Printf("🔧 %s améliorée ! Dégâts : %d\n", g.Weapon.Name, g.Weapon.Damage)
 	classes.Pause()
 }
-func (g *Game) skills() {
-	classes.ClearScreen()
-	fmt.Println(classes.TitleBox("🌳 ARBRE DE COMPÉTENCES"))
-	fmt.Printf("Points disponibles : %d\n\n", g.Player.SkillPoints)
-	skills := []struct {
-		Name string
-		Cost int
-		Desc string
-	}{{"Adrénaline", 1, "+3 attaque de base"}, {"Endurance", 1, "+20 PV max"}, {"Blindage", 1, "+2 défense"}, {"Maîtrise des armes", 2, "+5 dégâts d'arme"}, {"Médecine", 2, "+1 kit médical"}}
-	for i, s := range skills {
-		fmt.Printf("[%d] %s (%d pt) — %s\n", i+1, s.Name, s.Cost, s.Desc)
-	}
-	fmt.Println("[0] Retour")
-	x := classes.ReadInt()
-	if x < 1 || x > len(skills) {
-		return
-	}
-	s := skills[x-1]
-	if g.Player.SkillPoints < s.Cost {
-		fmt.Println("Points insuffisants.")
+func (g *Game) upgradeWorkshop() {
+	costS := 30 * g.WorkshopLevel
+	costC := 5 * g.WorkshopLevel
+	if g.Scrap < costS || g.Components < costC {
+		fmt.Printf("Il faut %d 🔩 et %d ⚙️.\n", costS, costC)
 		classes.Pause()
 		return
 	}
-	g.Player.SkillPoints -= s.Cost
-	switch x {
-	case 1:
-		g.Player.AttaqueBase += 3
-		g.Player.Attaque = g.Player.AttaqueBase
-	case 2:
-		g.Player.PVBase += 20
-		g.Player.PV = g.Player.PVBase
-	case 3:
-		g.Player.DefenseBase += 2
-		g.Player.Defense = g.Player.DefenseBase
-	case 4:
-		g.Weapon.Damage += 5
-		g.Player.WeaponDamage = g.Weapon.Damage
-	case 5:
-		g.Medkits++
+	g.Scrap -= costS
+	g.Components -= costC
+	g.WorkshopLevel++
+	fmt.Println("🔨 Atelier amélioré au niveau", g.WorkshopLevel)
+	classes.Pause()
+}
+
+func (g *Game) refuge() {
+	for {
+		classes.ClearScreen()
+		fmt.Println(classes.TitleBox("🏚️ GESTION DU REFUGE"))
+		fmt.Println(classes.Panel("INSTALLATIONS", fmt.Sprintf("🏚️ Refuge %d", g.RefugeLevel), fmt.Sprintf("⚡ Générateur %d", g.GeneratorLevel), fmt.Sprintf("📦 Stockage %d", g.StorageLevel), fmt.Sprintf("🛡️ Défenses %d", g.DefenseLevel)))
+		fmt.Println("[1] Améliorer le générateur", "\n[2] Améliorer le stockage", "\n[3] Renforcer les défenses", "\n[4] Améliorer le refuge", "\n[5] Dormir jusqu'au lendemain", "\n[0] Retour")
+		switch classes.ReadInt() {
+		case 1:
+			g.upgradeRefugePart("generator")
+		case 2:
+			g.upgradeRefugePart("storage")
+		case 3:
+			g.upgradeRefugePart("defense")
+		case 4:
+			g.upgradeRefugePart("refuge")
+		case 5:
+			g.sleep()
+		case 0:
+			return
+		}
 	}
-	fmt.Println("Compétence améliorée :", s.Name)
+}
+func (g *Game) upgradeRefugePart(kind string) {
+	lvl := 1
+	name := ""
+	switch kind {
+	case "generator":
+		lvl = g.GeneratorLevel
+		name = "générateur"
+	case "storage":
+		lvl = g.StorageLevel
+		name = "stockage"
+	case "defense":
+		lvl = g.DefenseLevel
+		name = "défenses"
+	case "refuge":
+		lvl = g.RefugeLevel
+		name = "refuge"
+	}
+	cs := 25 * lvl
+	cc := 3 * lvl
+	if g.SurvivorRole("Mécanicien") {
+		cs -= 5
+		if cs < 5 {
+			cs = 5
+		}
+	}
+	if g.Scrap < cs || g.Components < cc {
+		fmt.Printf("Il faut %d 🔩 et %d ⚙️ pour améliorer le %s.\n", cs, cc, name)
+		classes.Pause()
+		return
+	}
+	g.Scrap -= cs
+	g.Components -= cc
+	switch kind {
+	case "generator":
+		g.GeneratorLevel++
+		g.Fuel += 4
+	case "storage":
+		g.StorageLevel++
+		g.Player.MaxInventory += 3
+	case "defense":
+		g.DefenseLevel++
+	case "refuge":
+		g.RefugeLevel++
+	}
+	fmt.Println("🏗️", name, "amélioré !")
+	classes.Pause()
+}
+
+func (g *Game) survivorMenu() {
+	for {
+		classes.ClearScreen()
+		fmt.Println(classes.TitleBox("👥 SURVIVANTS"))
+		fmt.Printf("Réputation : %d\n\n", g.Reputation)
+		if len(g.Survivors) == 0 {
+			fmt.Println("Personne n'a encore rejoint votre refuge.")
+		} else {
+			for _, s := range g.Survivors {
+				fmt.Printf("• %s — %s — niveau %d\n  %s\n", s.Name, s.Role, s.Level, s.Description)
+			}
+		}
+		fmt.Println("\n[1] Recruter un survivant", "\n[2] Entraîner les survivants", "\n[0] Retour")
+		switch classes.ReadInt() {
+		case 1:
+			g.recruit()
+		case 2:
+			g.trainSurvivors()
+		case 0:
+			return
+		}
+	}
+}
+func (g *Game) recruit() {
+	if len(g.Survivors) >= 4 {
+		fmt.Println("Votre refuge ne peut plus accueillir de survivants.")
+		classes.Pause()
+		return
+	}
+	available := []Survivor{}
+	for _, s := range survivors {
+		found := false
+		for _, x := range g.Survivors {
+			if x.Name == s.Name {
+				found = true
+			}
+		}
+		if !found {
+			available = append(available, s)
+		}
+	}
+	if len(available) == 0 {
+		fmt.Println("Tous les survivants connus vous ont rejoint.")
+		classes.Pause()
+		return
+	}
+	s := available[rand.Intn(len(available))]
+	cost := 20 + len(g.Survivors)*15
+	if g.Player.Gold < cost {
+		fmt.Printf("%s demande %d 💰.\n", s.Name, cost)
+		classes.Pause()
+		return
+	}
+	g.Player.Gold -= cost
+	g.Survivors = append(g.Survivors, s)
+	g.Reputation++
+	fmt.Printf("👥 %s rejoint votre refuge !\n", s.Name)
+	classes.Pause()
+}
+func (g *Game) trainSurvivors() {
+	if len(g.Survivors) == 0 {
+		fmt.Println("Aucun survivant à entraîner.")
+		classes.Pause()
+		return
+	}
+	cost := 20 + g.RefugeLevel*10
+	if g.Scrap < cost {
+		fmt.Println("Ferraille insuffisante.")
+		classes.Pause()
+		return
+	}
+	g.Scrap -= cost
+	for i := range g.Survivors {
+		g.Survivors[i].Level++
+	}
+	fmt.Println("👥 Votre communauté progresse.")
+	classes.Pause()
+}
+
+func (g *Game) missions() {
+	for {
+		classes.ClearScreen()
+		fmt.Println(classes.TitleBox("📻 MISSIONS & RADIO"))
+		fmt.Println(classes.Panel("OBJECTIF DU JOUR", fmt.Sprintf("Jour %d", g.Day), "Les survivants ont besoin de ressources. Chaque expédition peut révéler un nouvel événement."))
+		fmt.Println("[1] Écouter la radio", "\n[2] Faire une mission de ravitaillement", "\n[3] Voir les statistiques", "\n[0] Retour")
+		switch classes.ReadInt() {
+		case 1:
+			g.radio()
+		case 2:
+			g.supplyMission()
+		case 3:
+			g.stats()
+		case 0:
+			return
+		}
+	}
+}
+func (g *Game) radio() {
+	events := []string{"📻 Un survivant parle d'un convoi abandonné.", "📻 Une voix inconnue transmet les coordonnées d'un laboratoire.", "📻 Quelqu'un demande des médicaments.", "📻 Une station annonce une pénurie de carburant."}
+	fmt.Println(events[rand.Intn(len(events))])
+	g.Reputation++
+	classes.Pause()
+}
+func (g *Game) supplyMission() {
+	cost := 2
+	if g.Fuel < cost {
+		fmt.Println("Pas assez de carburant.")
+		classes.Pause()
+		return
+	}
+	g.Fuel -= cost
+	fmt.Println("🚚 Mission de ravitaillement...")
+	time.Sleep(500 * time.Millisecond)
+	gain := rand.Intn(20) + 10
+	g.Scrap += gain
+	g.Food += rand.Intn(4) + 1
+	g.MissionsDone++
+	fmt.Printf("Mission réussie : +%d 🔩 et nourriture récupérée.\n", gain)
 	classes.Pause()
 }
 func (g *Game) stats() {
-	classes.ClearScreen()
-	fmt.Println(classes.TitleBox("📊 DOSSIER DU SURVIVANT"))
-	lines := []string{fmt.Sprintf("Niveau : %d", g.Player.Level), fmt.Sprintf("XP : %d/%d", g.Player.Exp, g.Player.MaxExp), fmt.Sprintf("Ennemis éliminés : %d", g.Player.Kills), fmt.Sprintf("Boss vaincus : %d", g.Player.BossesDefeated), fmt.Sprintf("Or : %d", g.Player.Gold), fmt.Sprintf("Ferraille : %d", g.Scrap), fmt.Sprintf("Arme : %s", g.Weapon.Name), fmt.Sprintf("Dégâts : %d", g.Weapon.Damage)}
-	sort.Strings(lines)
-	fmt.Println(classes.Panel("STATISTIQUES", lines...))
+	fmt.Println(classes.Panel("STATISTIQUES", fmt.Sprintf("☠️ Infectés éliminés : %d", g.Player.Kills), fmt.Sprintf("👑 Boss vaincus : %d", g.Player.BossesDefeated), fmt.Sprintf("🗺️ Zones nettoyées : %d/%d", len(g.Cleared), len(zones)), fmt.Sprintf("👥 Survivants : %d", len(g.Survivors)), fmt.Sprintf("📻 Missions : %d", g.MissionsDone), fmt.Sprintf("⭐ Niveau : %d", g.Player.Level)))
 	classes.Pause()
+}
+
+func (g *Game) event() bool {
+	classes.ClearScreen()
+	fmt.Println(classes.TitleBox("🎲 ÉVÉNEMENT"))
+	switch rand.Intn(5) {
+	case 0:
+		fmt.Println("🚗 Une voiture abandonnée contient du carburant.")
+		g.Fuel += 3
+	case 1:
+		fmt.Println("🏚️ Une cache contient des médicaments.")
+		g.Medicine += 2
+	case 2:
+		fmt.Println("📦 Des débris cachent des composants.")
+		g.Components += 3
+	case 3:
+		fmt.Println("🔩 Un atelier abandonné contient de la ferraille.")
+		g.Scrap += 15
+	case 4:
+		fmt.Println("☣️ Embuscade ! Vous perdez quelques PV.")
+		g.Player.PV -= 15
+		if g.Player.PV < 1 {
+			g.Player.PV = 1
+		}
+	}
+	classes.Pause()
+	return true
+}
+func (g *Game) recoverBetween() {
+	heal := g.Player.PVBase / 10
+	if heal < 5 {
+		heal = 5
+	}
+	g.Player.PV += heal
+	if g.Player.PV > g.Player.PVBase {
+		g.Player.PV = g.Player.PVBase
+	}
+	g.Player.Mana = g.Player.ManaMax
+}
+func (g *Game) unlockNext(z Zone) {
+	for i := range zones {
+		if zones[i].Name == z.Name && i+1 < len(zones) {
+			n := zones[i+1]
+			if g.Player.Level >= n.Level || g.Cleared[z.Name] {
+				g.Unlocked[n.Name] = true
+				fmt.Println("🔓 Nouvelle zone :", n.Name)
+			}
+		}
+	}
+}
+func (g *Game) advanceDay() {
+	g.Day++
+	g.Night = true
+	if g.Food > 0 {
+		g.Food--
+	}
+	if g.Fuel > 0 {
+		g.Fuel--
+	} else {
+		g.Player.PV -= 5
+		if g.Player.PV < 1 {
+			g.Player.PV = 1
+		}
+	}
+}
+func (g *Game) sleep() {
+	g.advanceDay()
+	g.Night = false
+	g.Player.PV = g.Player.PVBase
+	g.Player.Mana = g.Player.ManaMax
+	fmt.Printf("🌅 Jour %d. Vous êtes reposé.\n", g.Day)
+	classes.Pause()
+}
+func (g *Game) reputation(n int)     { g.Reputation += n }
+func (g *Game) reputationBonus() int { return g.Reputation * 3 }
+func (g *Game) SurvivorRole(role string) bool {
+	for _, s := range g.Survivors {
+		if s.Role == role {
+			return true
+		}
+	}
+	return false
+}
+func ternary(b bool, a, c string) string {
+	if b {
+		return a
+	}
+	return c
 }
