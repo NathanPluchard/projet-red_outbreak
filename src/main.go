@@ -8,6 +8,10 @@ import (
 
 	"outbreak/casino"
 	"outbreak/classes"
+	"outbreak/forgeron"
+	"outbreak/inventaire"
+	"outbreak/marchand"
+	"outbreak/potion"
 )
 
 type Weapon struct {
@@ -573,7 +577,7 @@ func (g *Game) inventoryMenu() {
 		fmt.Println(classes.TitleBox("🎒 INVENTAIRE DU SURVIVANT"))
 		fmt.Println(classes.Panel("RESSOURCES", fmt.Sprintf("🔩 Ferraille : %d", g.Scrap), fmt.Sprintf("⚙️ Composants : %d", g.Components), fmt.Sprintf("💊 Médicaments : %d", g.Medicine), fmt.Sprintf("⛽ Carburant : %d", g.Fuel), fmt.Sprintf("🍖 Nourriture : %d", g.Food)))
 		fmt.Println(classes.Panel("ÉQUIPEMENT", fmt.Sprintf("🔫 %s — %d dégâts — %d%% critique", g.Weapon.Name, g.Weapon.Damage, g.Weapon.Crit), fmt.Sprintf("🎒 Objets : %d/%d", len(g.Player.Inventory), g.Player.MaxInventory)))
-		fmt.Println("[1] Utiliser un objet  [2] Vendre un objet  [3] Armes  [0] Retour")
+		fmt.Println("[1] Utiliser un objet  [2] Vendre un objet  [3] Armes  [4] 🎒 Inventaire avancé  [0] Retour")
 		switch classes.ReadInt() {
 		case 1:
 			g.useInventoryItem()
@@ -581,6 +585,9 @@ func (g *Game) inventoryMenu() {
 			g.sellInventoryItem()
 		case 3:
 			g.weaponShop()
+		case 4:
+			inventaire.AccessInventory(g.Player)
+			classes.Pause()
 		case 0:
 			return
 		}
@@ -611,6 +618,26 @@ func (g *Game) useInventoryItem() {
 		classes.RemoveInventory(g.Player, it)
 		fmt.Println("🩹 Bandage utilisé.")
 	default:
+		for _, p := range potion.PotionsDeVieDisponibles {
+			if p.Nom == it {
+				potion.UtiliserPotion(g.Player, it)
+				classes.Pause()
+				return
+			}
+		}
+		for _, p := range potion.PotionsDePoisonDisponibles {
+			if p.Nom == it {
+				potion.UtiliserPotion(g.Player, it)
+				classes.Pause()
+				return
+			}
+		}
+		if tier, ok := forgeron.FindTierSlot(it); ok && tier != nil {
+			forgeron.EquipItem(g.Player, it)
+			classes.Pause()
+			return
+		}
+		fmt.Println("Cet objet ne peut pas être utilisé ici.")
 		fmt.Println("Cet objet ne peut pas être utilisé ici.")
 	}
 	classes.Pause()
@@ -681,7 +708,7 @@ func (g *Game) market() {
 		classes.ClearScreen()
 		fmt.Println(classes.TitleBox("🛒 MARCHÉ NOIR"))
 		fmt.Println(classes.Panel("TON STOCK", fmt.Sprintf("💰 %d or", g.Player.Gold), fmt.Sprintf("🔩 %d ferraille", g.Scrap), fmt.Sprintf("⚙️ %d composants", g.Components)))
-		fmt.Println("[1] Vendre 5 ferrailles → 15 💰", "\n[2] Vendre 1 composant → 12 💰", "\n[3] Acheter 1 médicament → 25 💰", "\n[4] Acheter 5 ferrailles → 25 💰", "\n[0] Retour")
+		fmt.Println("[1] Vendre 5 ferrailles → 15 💰", "\n[2] Vendre 1 composant → 12 💰", "\n[3] Acheter 1 médicament → 25 💰", "\n[4] Acheter 5 ferrailles → 25 💰", "\n[5] 🛒 Ouvrir le Troqueur historique", "\n[0] Retour")
 		switch classes.ReadInt() {
 		case 1:
 			if g.Scrap >= 5 {
@@ -719,6 +746,8 @@ func (g *Game) market() {
 				fmt.Println("Or insuffisant.")
 			}
 			classes.Pause()
+		case 5:
+			marchand.Merchant(g.Player)
 		case 0:
 			return
 		}
@@ -730,7 +759,7 @@ func (g *Game) workshop() {
 		classes.ClearScreen()
 		fmt.Println(classes.TitleBox("🔨 ATELIER DU REFUGE"))
 		fmt.Println(classes.Panel("NIVEAUX", fmt.Sprintf("🔨 Atelier : %d", g.WorkshopLevel), fmt.Sprintf("🔩 Ferraille : %d", g.Scrap), fmt.Sprintf("⚙️ Composants : %d", g.Components)))
-		fmt.Println("[1] Améliorer l'arme", "\n[2] Fabriquer des médicaments", "\n[3] Fabriquer une grenade", "\n[4] Améliorer l'atelier", "\n[0] Retour")
+		fmt.Println("[1] Améliorer l'arme", "\n[2] Fabriquer des médicaments", "\n[3] Fabriquer une grenade", "\n[4] Améliorer l'atelier", "\n[5] 🔨 Ouvrir le Bricoleur historique", "\n[0] Retour")
 		switch classes.ReadInt() {
 		case 1:
 			g.upgradeWeapon()
@@ -761,6 +790,8 @@ func (g *Game) workshop() {
 			classes.Pause()
 		case 4:
 			g.upgradeWorkshop()
+		case 5:
+			forgeron.BlacksmithTiers(g.Player)
 		case 0:
 			return
 		}
