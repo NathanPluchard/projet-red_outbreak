@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"outbreak/casino"
 	"outbreak/classes"
 )
 
@@ -232,6 +233,7 @@ func (g *Game) loop() {
 			"[7] 📻 Missions & événements",
 			"[8] 👤 Fiche du personnage",
 			"[9] 📋 Journal de survie",
+			"[10] 🎰 Casino de la Zone Morte",
 			"[0] Quitter",
 		))
 		fmt.Print("\nAction > ")
@@ -256,6 +258,8 @@ func (g *Game) loop() {
 			classes.Pause()
 		case 9:
 			g.journal()
+		case 10:
+			casino.Casino(g.Player)
 		case 0:
 			fmt.Println("À bientôt, survivant.")
 			return
