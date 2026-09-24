@@ -238,6 +238,7 @@ func (g *Game) loop() {
 			"[8] 👤 Fiche du personnage",
 			"[9] 📋 Journal de survie",
 			"[10] 🎰 Casino de la Zone Morte",
+			"[11] 👥 Qui sont-ils ?",
 			"[0] Quitter",
 		))
 		fmt.Print("\nAction > ")
@@ -264,11 +265,32 @@ func (g *Game) loop() {
 			g.journal()
 		case 10:
 			casino.Casino(g.Player)
+		case 11:
+			showArtists()
 		case 0:
 			fmt.Println("À bientôt, survivant.")
 			return
 		}
 	}
+}
+
+func showArtists() {
+	classes.ClearScreen()
+	fmt.Println(classes.TitleBox("🎬 QUI SONT-ILS ?"))
+	fmt.Println()
+	fmt.Println(classes.Panel(
+		"🎵 ABBA",
+		"Groupe pop suédois formé à Stockholm en 1972.",
+		"Membres : Agnetha Fältskog, Björn Ulvaeus, Benny Andersson et Anni-Frid Lyngstad.",
+	))
+	fmt.Println()
+	fmt.Println(classes.Panel(
+		"🎬 Steven Spielberg",
+		"Réalisateur, producteur et scénariste américain.",
+		"Il est notamment connu pour Jurassic Park, E.T. et Les Dents de la mer.",
+	))
+	fmt.Println()
+	classes.Pause()
 }
 
 func (g *Game) expeditionMenu() {
